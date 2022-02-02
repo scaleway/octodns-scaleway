@@ -39,13 +39,13 @@ providers:
     # API Secret Key
     token: env/SCALEWAY_SECRET_KEY
     # API Create zone
-    create_zone: True
+    create_zone: False
 ```
 
 #### Create Zone
 Optional argument (default: False).  
 If set to True, Automaticaly create new zone when needed, be carreful, create a new zone can add fee.  
-If set to False, try to use only the master zone.
+If set to False, use the root zone.
 
 ### Support Information
 

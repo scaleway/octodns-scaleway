@@ -38,8 +38,8 @@ class ScalewayClientNotFound(ScalewayClientException):
 
 
 class ScalewayClientUnknownDomainName(ScalewayClientException):
-    def __init__(self, msg):
-        super(ScalewayClientUnknownDomainName, self).__init__(msg)
+    def __init__(self):
+        super(ScalewayClientUnknownDomainName, self).__init__('Domain not found')
 
 
 class ScalewayClient(object):
@@ -70,16 +70,7 @@ class ScalewayClient(object):
             return self._request('GET', f'/dns-zones/{zone_name}/records'
                                  '?page_size=1000').json()['records']
         except ScalewayClientForbidden:
-            if self.create_zone:
-                return []
-            else:
-                e = ScalewayClientUnknownDomainName('This zone does '
-                                                    'not exists, set the arg '
-                                                    'create_zone to True to '
-                                                    'allow creation of a new '
-                                                    'zone')
-                e.__cause__ = None
-                raise e
+            return []
 
     def record_updates(self, zone_name, data):
         self._request('PATCH', f'/dns-zones/{zone_name}/records',
@@ -93,7 +84,7 @@ class ScalewayProvider(BaseProvider):
                      'NAPTR', 'NS', 'PTR', 'SPF', 'SRV', 'SSHFP',
                      'TXT']))
 
-    def __init__(self, id, token, create_zone=True, *args, **kwargs):
+    def __init__(self, id, token, create_zone=False, *args, **kwargs):
         self.log = getLogger(f'ScalewayProvider[{id}]')
         self.log.debug('__init__: id=%s, token=***, create_zone=%s', id,
                        create_zone)
@@ -404,6 +395,7 @@ class ScalewayProvider(BaseProvider):
     def _apply_updates(self, zone, updates):
         self._client.record_updates(zone, {
             "return_all_records": False,
+            "disallow_new_zone_creation": not self._client.create_zone,
             "changes": updates
         })
 
@@ -429,7 +421,12 @@ class ScalewayProvider(BaseProvider):
                 updates.append(self._params_delete(change))
 
         # Apply the update in the right order: deletes, updates and creates
-        self._apply_updates(zone, deletes + updates + creates)
+        try:
+            self._apply_updates(zone, deletes + updates + creates)
+        except ScalewayClientForbidden:
+            e = ScalewayClientUnknownDomainName()
+            e.__cause__ = None
+            raise e
 
         # Clear out the cache if any
         self._zone_records.pop(desired.name, None)

@@ -132,19 +132,6 @@ class TestScalewayProvider(TestCase):
                 provider.populate(zone)
             self.assertEqual('Unauthorized', str(ctx.exception))
 
-        # Forbidden without zone creation
-        with requests_mock() as mock:
-            provider2 = ScalewayProvider('test', 'token', False)
-            mock.get(ANY, status_code=403,
-                     text='{"message": "domain not found"}')
-
-            with self.assertRaises(ScalewayClientUnknownDomainName) as ctx:
-                zone = Zone('unit.tests.', [])
-                provider2.populate(zone)
-            self.assertEqual('This zone does not exists, set the arg '
-                             'create_zone to True to allow creation '
-                             'of a new zone', str(ctx.exception))
-
         # General error
         with requests_mock() as mock:
             mock.get(ANY, status_code=502, text='Things caught fire')
@@ -236,8 +223,30 @@ class TestScalewayProvider(TestCase):
             ]), zone.records)
 
     def test_apply(self):
-        provider = ScalewayProvider('test', 'token', False)
+        # Non-existent zone doesn't populate anything
+        with requests_mock() as mock:
+            provider = ScalewayProvider('test', 'token', True)
 
+            mock.get('/domain/v2beta1/dns-zones/'
+                        'unit.not-exists/records?page_size=1000', status_code=403)
+            mock.patch('/domain/v2beta1/dns-zones/'
+                         'unit.not-exists/records', status_code=403,
+                     text='{"message": "domain not found"}')
+
+            zone_not_exists = Zone('unit.not-exists.', [])
+            zone_not_exists.add_record(Record.new(zone_not_exists, 'ttl', {
+                'ttl': 300,
+                'type': 'A',
+                'value': '3.2.3.4'
+            }))
+
+            plan_not_exists = provider.plan(zone_not_exists)
+            self.assertTrue(plan_not_exists.exists)
+            self.assertEqual(1, len(plan_not_exists.changes))
+            with self.assertRaises(ScalewayClientUnknownDomainName) as ctx:
+                provider.apply(plan_not_exists)
+
+        provider = ScalewayProvider('test', 'token', False)
         resp = Mock()
         resp.json = Mock()
         provider._client._request = Mock(return_value=resp)
@@ -252,7 +261,6 @@ class TestScalewayProvider(TestCase):
         n = len(self.expected.records)
         self.assertEqual(n, len(plan.changes))
         self.assertEqual(n, provider.apply(plan))
-        # self.assertEqual(n, provider.apply(plan))
         self.assertFalse(plan.exists)
 
         provider._client._request.assert_has_calls([
@@ -260,6 +268,7 @@ class TestScalewayProvider(TestCase):
             call('GET', '/dns-zones/unit.tests/records?page_size=1000'),
             call('PATCH', '/dns-zones/unit.tests/records', data={
                 'return_all_records': False,
+                'disallow_new_zone_creation': True,
                 'changes': [
                     {
                         'add': {
@@ -428,10 +437,11 @@ class TestScalewayProvider(TestCase):
         self.assertTrue(plan.exists)
         self.assertEqual(2, len(plan.changes))
         self.assertEqual(2, provider.apply(plan))
-        # recreate for update, and deletes for the 2 parts of the other
+
         provider._client._request.assert_has_calls([
             call('PATCH', '/dns-zones/unit.tests/records', data={
                 'return_all_records': False,
+                'disallow_new_zone_creation': True,
                 'changes': [
                     {
                         'set': {
