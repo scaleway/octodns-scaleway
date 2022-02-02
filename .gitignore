@@ -13,6 +13,7 @@ env/
 htmlcov/
 nosetests.xml
 octodns.egg-info/
+octodns_*.egg-info/
 output/
 tests/zones/unit.tests.
 tmp/
