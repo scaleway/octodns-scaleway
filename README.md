@@ -1,4 +1,4 @@
-## Scaleway DNS provider provider for octoDNS
+## Scaleway DNS provider for octoDNS
 
 An [octoDNS](https://github.com/octodns/octodns/) provider that targets [Scaleway DNS](https://www.scaleway.com/en/dns/).
 
