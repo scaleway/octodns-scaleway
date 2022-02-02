@@ -1,0 +1,122 @@
+{
+  "total_count": 6,
+  "records": [
+    {
+      "id": "dc371588-a520-40eb-bcee-1360f0de3c16",
+      "data": "",
+      "name": "naptr",
+      "priority": 0,
+      "ttl": 600,
+      "type": "NAPTR",
+      "comment": null
+    },
+    {
+      "id": "dc371588-a520-40eb-bcee-1360f0de3c17",
+      "data": "100 \"U\" \"SIP+D2U\" \"!^.*$!sip:info@bar.example.com!\" .",
+      "name": "naptr",
+      "priority": 0,
+      "ttl": 600,
+      "type": "NAPTR",
+      "comment": null
+    },
+    {
+      "id": "dc371588-a520-40eb-bcee-1360f0de3c18",
+      "data": "",
+      "name": "_srv._tcp",
+      "priority": 0,
+      "ttl": 600,
+      "type": "SRV",
+      "comment": null
+    },
+    {
+      "id": "dc371588-a520-40eb-bcee-1360f0de3c19",
+      "data": "20 foo-2.unit.tests",
+      "name": "_srv._tcp",
+      "priority": 0,
+      "ttl": 600,
+      "type": "SRV",
+      "comment": null
+    },
+    {
+      "id": "dc371588-a520-40eb-bcee-1360f0de3c20",
+      "data": "",
+      "name": "",
+      "priority": 0,
+      "ttl": 600,
+      "type": "SSHFP",
+      "comment": null
+    },
+    {
+      "id": "dc371588-a520-40eb-bcee-1360f0de3c21",
+      "data": "1 1",
+      "name": "",
+      "priority": 0,
+      "ttl": 600,
+      "type": "SSHFP",
+      "comment": null
+    },
+    {
+      "id": "561f339a-8417-4e8e-af8c-1ffe03a1d7b8",
+      "data": "",
+      "name": "caa",
+      "priority": 0,
+      "ttl": 600,
+      "type": "CAA",
+      "comment": null
+    },
+    {
+      "id": "561f339a-8417-4e8e-af8c-1ffe03a1d7b9",
+      "data": "0issue\"ca2.example.net.\"",
+      "name": "caa",
+      "priority": 0,
+      "ttl": 600,
+      "type": "CAA",
+      "comment": null
+    },
+    {
+      "id": "151f4bd5-5eac-45c1-b818-b922bfde4f82",
+      "data": "",
+      "name": "loc",
+      "priority": 0,
+      "ttl": 600,
+      "type": "LOC",
+      "comment": null
+    },
+    {
+      "id": "151f4bd5-5eac-45c1-b818-b922bfde4f83",
+      "data": "51 57 0.123 N 5 54 0.000 E 4.00 1.00m 10000.00m 10.00m",
+      "name": "loc",
+      "priority": 0,
+      "ttl": 600,
+      "type": "LOC",
+      "comment": null
+    },
+    {
+      "id": "151f4bd5-5eac-45c1-b818-b922bfde4f84",
+      "data": "not-supported",
+      "name": "fname",
+      "priority": 0,
+      "ttl": 600,
+      "type": "FNAME",
+      "comment": null
+    },
+    {
+      "id": "89a621c4-c7d2-47fc-80a1-3e5070e4c908",
+      "data": "",
+      "name": "mx",
+      "priority": 100,
+      "ttl": 600,
+      "type": "MX",
+      "comment": null
+    },
+    {
+      "id": "89a621c4-c7d2-47fc-80a1-3e5070e4c909",
+      "data": "mx2.example.net.",
+      "name": "mx",
+      "priority": 100,
+      "ttl": 600,
+      "type": "MX",
+      "comment": null
+    }
+  ]
+}

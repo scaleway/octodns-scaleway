@@ -1,0 +1,131 @@
+{
+  "total_count": 14,
+  "records": [
+    {
+      "id": "dc371588-a520-40eb-bcee-1360f0de3c16",
+      "data": "ns0.dom.scw.cloud.",
+      "name": "",
+      "priority": 0,
+      "ttl": 600,
+      "type": "NS",
+      "comment": null
+    },
+    {
+      "id": "7eab864c-66c3-46a7-be17-a2472a3841c4",
+      "data": "ns1.dom.scw.cloud.",
+      "name": "",
+      "priority": 0,
+      "ttl": 600,
+      "type": "NS",
+      "comment": null
+    },
+    {
+      "id": "6f2f152b-d0d6-43ac-bac2-f80426afa0d1",
+      "data": "0 100 390 test.com.",
+      "name": "_srv._tcp",
+      "priority": 0,
+      "ttl": 60,
+      "type": "SRV",
+      "comment": null
+    },
+    {
+      "id": "fd986064-81bd-4031-880f-7c7466f44975",
+      "data": "cname.example.net.",
+      "name": "cname",
+      "priority": 0,
+      "ttl": 60,
+      "type": "CNAME",
+      "comment": null
+    },
+    {
+      "id": "4d902ccf-cd8e-45f7-96dc-50fca791094f",
+      "data": "2001:db8:3333:4444:5555:6666:7777:8886",
+      "name": "b",
+      "priority": 0,
+      "ttl": 60,
+      "type": "AAAA",
+      "comment": null
+    },
+    {
+      "id": "9ce093db-e270-45e8-8c24-ef30d555369a",
+      "data": "2001:db8:3333:4444:5555:6666:7777:8887",
+      "name": "b",
+      "priority": 0,
+      "ttl": 60,
+      "type": "AAAA",
+      "comment": null
+    },
+    {
+      "id": "561f339a-8417-4e8e-af8c-1ffe03a1d7b8",
+      "data": "0 issue \"ca2.example.net.\"",
+      "name": "c",
+      "priority": 0,
+      "ttl": 60,
+      "type": "CAA",
+      "comment": null
+    },
+    {
+      "id": "151f4bd5-5eac-45c1-b818-b922bfde4f82",
+      "data": "51 57 0.123 N 5 54 0.000 E 4.00m 1.00m 10000.00m 10.00m",
+      "name": "d",
+      "priority": 0,
+      "ttl": 60,
+      "type": "LOC",
+      "comment": null
+    },
+    {
+      "id": "89a621c4-c7d2-47fc-80a1-3e5070e4c908",
+      "data": "200 mx2.example.net.",
+      "name": "e",
+      "priority": 200,
+      "ttl": 60,
+      "type": "MX",
+      "comment": null
+    },
+    {
+      "id": "913b03a2-8873-4bf5-98a2-fff484a9eeb3",
+      "data": "100 mx.example.net.",
+      "name": "e",
+      "priority": 100,
+      "ttl": 60,
+      "type": "MX",
+      "comment": null
+    },
+    {
+      "id": "31a5edd8-874c-48b0-9a32-bc947471db3a",
+      "data": "101 10 \"U\" \"E2U+sip\" \"!^.*$!sip:service@example.com\" .",
+      "name": "f",
+      "priority": 0,
+      "ttl": 60,
+      "type": "NAPTR",
+      "comment": null
+    },
+    {
+      "id": "01c0b024-b64c-4193-a85a-61bf7ec568c5",
+      "data": "test2.ptr.com.",
+      "name": "h",
+      "priority": 0,
+      "ttl": 60,
+      "type": "PTR",
+      "comment": null
+    },
+    {
+      "id": "4ab62d74-6584-4764-9211-7036c7718d5b",
+      "data": "2 1 123456789abcdef67890123456789abcdef67899",
+      "name": "sshfp",
+      "priority": 0,
+      "ttl": 60,
+      "type": "SSHFP",
+      "comment": null
+    },
+    {
+      "id": "f10dc480-7815-4685-ab99-906cc259f32d",
+      "data": "\"long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text long text\"",
+      "name": "l",
+      "priority": 0,
+      "ttl": 60,
+      "type": "TXT",
+      "comment": null
+    }
+  ]
+}
