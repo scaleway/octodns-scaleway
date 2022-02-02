@@ -48,7 +48,7 @@ class ScalewayClient(object):
         session = Session()
         session.headers.update({'x-auth-token': token})
         self._session = session
-        self.endpoint = 'http://127.0.0.1:4789/domain/v2beta1'
+        self.endpoint = 'https://api.scaleway.com/domain/v2beta1'
         self.create_zone = create_zone
 
     def _request(self, method, path, params={}, data=None):

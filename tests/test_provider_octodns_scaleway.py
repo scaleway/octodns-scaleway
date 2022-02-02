@@ -162,7 +162,7 @@ class TestScalewayProvider(TestCase):
         # No diffs == no changes
         with requests_mock() as mock:
             with open('tests/fixtures/scaleway-ok.json') as fh:
-                mock.get('http://127.0.0.1:4789/domain/v2beta1/dns-zones/'
+                mock.get('/domain/v2beta1/dns-zones/'
                          'unit.tests/records?page_size=1000', text=fh.read())
 
             zone = Zone('unit.tests.', [])
