@@ -9,7 +9,8 @@ from unittest.mock import Mock, call
 
 from octodns.record import Record
 from octodns_scaleway import ScalewayClientBadRequest,\
-    ScalewayClientUnknownDomainName, ScalewayClientNotFound, ScalewayProvider
+    ScalewayClientUnknownDomainName, ScalewayClientNotFound, ScalewayProvider,\
+    ScalewayProviderException
 from octodns.zone import Zone
 
 
@@ -102,6 +103,80 @@ class TestScalewayProvider(TestCase):
                 'port': 30,
                 'target': 'cname.unit.tests.'
             }
+        }),
+        ('dynamic', {
+            'ttl': 1800,
+            'type': 'A',
+            'value': '1.1.1.1',
+            'dynamic': {
+                'pools': {
+                    'pool-0': {
+                        'fallback': 'pool-3',
+                        'values': [{
+                            'value': '2.2.2.2',
+                        }],
+                    },
+                    'pool-1': {
+                        'fallback': 'pool-3',
+                        'values': [{
+                            'value': '3.3.3.3',
+                        }],
+                    },
+                    'pool-2': {
+                        'fallback': 'pool-3',
+                        'values': [{
+                            'value': '4.4.4.4',
+                        }],
+                    },
+                    'pool-3': {
+                        'fallback': None,
+                        'values': [{
+                            'value': '5.5.5.5',
+                        }],
+                    },
+                },
+                'rules': [
+                    {
+                        'pool': 'pool-0',
+                        'geos': [
+                            'EU-FR',
+                            'EU-BE'
+                        ]
+                    },
+                    {
+                        'pool': 'pool-1',
+                        'geos': ['EU']
+                    },
+                    {
+                        'pool': 'pool-2',
+                        'geos': ['NA-US-KY']
+                    },
+                    {
+                        'pool': 'pool-3'
+                    }
+                ]
+            }
+        }),
+        ('dynamic2', {
+            'ttl': 1800,
+            'type': 'A',
+            'value': '1.1.1.1',
+            'dynamic': {
+                'pools': {
+                    'pool-0': {
+                        'fallback': None,
+                        'values': [{
+                            'value': '2.2.2.2',
+                        }],
+                    },
+                },
+                'rules': [
+                    {
+                        'pool': 'pool-0',
+                        'geos': ['EU']
+                    }
+                ]
+            }
         })
     ):
         expected.add_record(Record.new(expected, name, data))
@@ -168,16 +243,16 @@ class TestScalewayProvider(TestCase):
             zone = Zone('unit.tests.', [])
 
             provider.populate(zone)
-            self.assertEqual(11, len(zone.records))
+            self.assertEqual(13, len(zone.records))
             changes = self.expected.changes(zone, provider)
-            self.assertEqual(19, len(changes))
+            self.assertEqual(23, len(changes))
 
         # 2nd populate makes no network calls/all from cache
         again = Zone('unit.tests.', [])
         provider.populate(again)
-        self.assertEqual(11, len(again.records))
+        self.assertEqual(13, len(again.records))
         changes = self.expected.changes(zone, provider)
-        self.assertEqual(19, len(changes))
+        self.assertEqual(23, len(changes))
 
         # bust the cache
         del provider._zone_records[zone.name]
@@ -227,11 +302,11 @@ class TestScalewayProvider(TestCase):
         with requests_mock() as mock:
             provider = ScalewayProvider('test', 'token', True)
 
-            mock.get('/domain/v2beta1/dns-zones/'
-                        'unit.not-exists/records?page_size=1000', status_code=403)
+            mock.get('/domain/v2beta1/dns-zones/unit.not-exists'
+                     '/records?page_size=1000', status_code=403)
             mock.patch('/domain/v2beta1/dns-zones/'
-                         'unit.not-exists/records', status_code=403,
-                     text='{"message": "domain not found"}')
+                       'unit.not-exists/records', status_code=403,
+                       text='{"message": "domain not found"}')
 
             zone_not_exists = Zone('unit.not-exists.', [])
             zone_not_exists.add_record(Record.new(zone_not_exists, 'ttl', {
@@ -245,6 +320,81 @@ class TestScalewayProvider(TestCase):
             self.assertEqual(1, len(plan_not_exists.changes))
             with self.assertRaises(ScalewayClientUnknownDomainName) as ctx:
                 provider.apply(plan_not_exists)
+            self.assertEqual('Domain not found', str(ctx.exception))
+
+        # Test dynamic record exceptions
+        with requests_mock() as mock:
+            provider = ScalewayProvider('test', 'token', True)
+
+            zone_dynamic = Zone('unit.dynamic.', [])
+            zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
+                'ttl': 300,
+                'type': 'A',
+                'value': '3.2.3.4',
+                'dynamic': {
+                    'pools': {
+                        'pool-0': {
+                            'values': [{'value': '2.2.2.2'}],
+                        },
+                    },
+                    'rules': [{
+                        'pool': 'pool-0'
+                    }]
+                }
+            }))
+
+            with self.assertRaises(ScalewayProviderException) as ctx:
+                provider.plan(zone_dynamic)
+            self.assertEqual('No dynamic type record found',
+                             str(ctx.exception))
+
+            zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
+                'ttl': 300,
+                'type': 'A',
+                'value': '3.2.3.4',
+                'dynamic': {
+                    'pools': {
+                        'pool-0': {
+                            'values': [
+                                {'value': '2.2.2.2'},
+                                {'value': '2.2.2.3'}
+                            ],
+                        },
+                    },
+                    'rules': [{
+                        'pool': 'pool-0'
+                    }]
+                }
+            }), replace=True)
+
+            with self.assertRaises(ScalewayProviderException) as ctx:
+                provider.plan(zone_dynamic)
+            self.assertEqual('Only accept 1 value for dynamic records',
+                             str(ctx.exception))
+
+            zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
+                'ttl': 300,
+                'type': 'A',
+                'value': '3.2.3.4',
+                'dynamic': {
+                    'pools': {
+                        'pool-0': {
+                            'values': [{
+                                'value': '2.2.2.2',
+                                'status': 'up'
+                            }],
+                        },
+                    },
+                    'rules': [{
+                        'pool': 'pool-0'
+                    }]
+                }
+            }), replace=True)
+
+            with self.assertRaises(ScalewayProviderException) as ctx:
+                provider.plan(zone_dynamic)
+            self.assertEqual('Only accept geos, not weight or status',
+                             str(ctx.exception))
 
         provider = ScalewayProvider('test', 'token', False)
         resp = Mock()
@@ -290,6 +440,59 @@ class TestScalewayProvider(TestCase):
                                     'ttl': 1800,
                                     'type': 'SRV',
                                     'data': '10 20 30 cname.unit.tests.'
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        'add': {
+                            'records': [
+                                {
+                                    'name': 'dynamic',
+                                    'ttl': 1800,
+                                    'type': 'A',
+                                    'data': '1.1.1.1',
+                                    'geo_ip_config': {
+                                        'matches': [
+                                            {
+                                                'continents': ['EU'],
+                                                'countries': ['BE', 'FR'],
+                                                'data': '2.2.2.2'
+                                            },
+                                            {
+                                                'continents': ['EU'],
+                                                'countries': [],
+                                                'data': '3.3.3.3'
+                                            },
+                                            {
+                                                'continents': ['NA'],
+                                                'countries': ['US'],
+                                                'data': '4.4.4.4'
+                                            }
+                                        ],
+                                        'default': '5.5.5.5'
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        'add': {
+                            'records': [
+                                {
+                                    'name': 'dynamic2',
+                                    'ttl': 1800,
+                                    'type': 'A',
+                                    'data': '1.1.1.1',
+                                    'geo_ip_config': {
+                                        'matches': [
+                                            {
+                                                'continents': ['EU'],
+                                                'countries': [],
+                                                'data': '2.2.2.2'
+                                            }
+                                        ]
+                                    }
                                 }
                             ]
                         }

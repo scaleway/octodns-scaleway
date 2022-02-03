@@ -7,6 +7,7 @@ from requests import Session
 from logging import getLogger
 
 from octodns.record import Record
+from octodns.record.geo import GeoCodes
 from octodns.provider import ProviderException
 from octodns.provider.base import BaseProvider
 
@@ -14,6 +15,10 @@ __VERSION__ = '0.0.1'
 
 
 class ScalewayClientException(ProviderException):
+    pass
+
+
+class ScalewayProviderException(ProviderException):
     pass
 
 
@@ -39,7 +44,8 @@ class ScalewayClientNotFound(ScalewayClientException):
 
 class ScalewayClientUnknownDomainName(ScalewayClientException):
     def __init__(self):
-        super(ScalewayClientUnknownDomainName, self).__init__('Domain not found')
+        super(ScalewayClientUnknownDomainName, self).__init__('Domain not '
+                                                              'found')
 
 
 class ScalewayClient(object):
@@ -79,7 +85,8 @@ class ScalewayClient(object):
 
 class ScalewayProvider(BaseProvider):
     SUPPORTS_GEO = False
-    SUPPORTS_DYNAMIC = False
+    SUPPORTS_DYNAMIC = True
+    SUPPORTS_POOL_VALUE_STATUS = False
     SUPPORTS = set((['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'LOC', 'MX',
                      'NAPTR', 'NS', 'PTR', 'SPF', 'SRV', 'SSHFP',
                      'TXT']))
@@ -92,6 +99,61 @@ class ScalewayProvider(BaseProvider):
         self._client = ScalewayClient(token, id, create_zone)
 
         self._zone_records = {}
+
+    def _data_dynamic(self, geo_ip_config):
+        pools = {}
+        rules = []
+
+        # rules
+        n = 0
+        fallback = None
+        for match in geo_ip_config['matches']:
+            geos = []
+            if 'countries' in match and len(match['countries']):
+                for country in match['countries']:
+                    geos.append(GeoCodes.country_to_code(country))
+            else:
+                geos = match['continents']
+
+            rules.append({
+                'pool': f'pool-{n}',
+                'geos': geos
+            })
+            n += 1
+
+        if geo_ip_config['default']:
+            fallback = f'pool-{n}'
+            rules.append({
+                'pool': fallback
+            })
+
+        # pools
+        n = 0
+        for match in geo_ip_config['matches']:
+            pools[f'pool-{n}'] = {
+                'fallback': fallback if fallback else None,
+                'values': [{
+                    'value': match['data'],
+                    'weight': 1,
+                    'status': 'obey'
+                }]
+            }
+            n += 1
+
+        if fallback:
+            pools[f'pool-{n}'] = {
+                'fallback': None,
+                'values': [{
+                    'value': geo_ip_config['default'],
+                    'weight': 1,
+                    'status': 'obey'
+                }]
+            }
+
+        return {
+            'pools': pools,
+            'rules': rules
+        }
 
     def _data_for_multiple(self, _type, records):
         return {
@@ -107,12 +169,26 @@ class ScalewayProvider(BaseProvider):
             'value': records[0]['data']
         }
 
-    _data_for_A = _data_for_multiple
-    _data_for_AAAA = _data_for_multiple
+    def _data_for_A_AAAA(self, _type, records):
+        record = {
+            'ttl': records[0]['ttl'],
+            'type': _type,
+            'values': []
+        }
+
+        for r in records:
+            if 'geo_ip_config' in r:
+                record['dynamic'] = self._data_dynamic(r['geo_ip_config'])
+
+            record['values'].append(r['data'])
+
+        return record
+
+    _data_for_A = _data_for_A_AAAA
+    _data_for_AAAA = _data_for_A_AAAA
     _data_for_NS = _data_for_multiple
 
     _data_for_ALIAS = _data_for_single
-    _data_for_CNAME = _data_for_single
     _data_for_PTR = _data_for_single
 
     def _data_for_CAA(self, _type, records):
@@ -135,6 +211,19 @@ class ScalewayProvider(BaseProvider):
             'type': _type,
             'values': values
         }
+
+    def _data_for_CNAME(self, _type, records):
+        record = {
+            'ttl': records[0]['ttl'],
+            'type': _type,
+            'value': records[0]['data']
+        }
+
+        for r in records:
+            if 'geo_ip_config' in r:
+                record['dynamic'] = self._data_dynamic(r['geo_ip_config'])
+
+        return record
 
     def _data_for_LOC(self, _type, records):
         values = []
@@ -297,33 +386,44 @@ class ScalewayProvider(BaseProvider):
     def _record_name(self, name):
         return name if name else '@'
 
+    def _params(self, record):
+        dynamic = {}
+        if getattr(record, 'dynamic', False):
+            dynamic = self._params_dynamic(record.dynamic.pools,
+                                           record.dynamic.rules)
+
+        records = getattr(self, f'_params_for_{record._type}')(record)
+        if dynamic and len(records):
+            records[0]['geo_ip_config'] = dynamic
+            records = [records[0]]
+
+        return records
+
     def _params_delete(self, record):
         return {
-            "delete": {
-                "idFields": {
-                    "type": record.record._type,
-                    "name": record.record.name
+            'delete': {
+                'idFields': {
+                    'type': record.record._type,
+                    'name': record.record.name
                 }
             }
         }
 
     def _params_update(self, record):
         return {
-            "set": {
-                "idFields": {
-                    "type": record.record._type,
-                    "name": record.record.name
+            'set': {
+                'idFields': {
+                    'type': record.record._type,
+                    'name': record.record.name
                 },
-                "records": getattr(self, f'_params_for_{record.new._type}')
-                                  (record.new)
+                'records': self._params(record.new)
             }
         }
 
     def _params_create(self, record):
         return {
-            "add": {
-                "records": getattr(self, f'_params_for_{record.record._type}')
-                                  (record.new)
+            'add': {
+                'records': self._params(record.new)
             }
         }
 
@@ -392,11 +492,70 @@ class ScalewayProvider(BaseProvider):
                          f'{v.fingerprint}' for v in record.values]
         return self._params_for_multiple(record)
 
+    def _params_dynamic(self, pools, rules):
+        matches = []
+        default = None
+        have_geo = False
+        have_weight = False
+        have_http_service = False
+        for rule in rules:
+            pool = pools[rule._data()['pool']]
+
+            # only accept 1 value ATM
+            if len(pool._data()['values']) != 1:
+                raise ScalewayProviderException('Only accept 1 value for '
+                                                'dynamic records')
+
+            for value in pool._data()['values']:
+                self.log.info(value['weight'])
+                # only accept Geo ATM
+                #  octodns cannot have weight != 1 with only 1 value
+                # if value['weight'] != 1:
+                #    have_weight = True
+                #    raise ScalewayProviderException('Only accept geos, '
+                #                                    'not weight or status')
+
+                if value['status'] != 'obey':
+                    have_http_service = True
+                    raise ScalewayProviderException('Only accept geos, '
+                                                    'not weight or status')
+
+            if 'geos' in rule._data():
+                have_geo = True
+
+            if (have_weight + have_http_service + have_geo) == 0:
+                raise ScalewayProviderException('No dynamic type record found')
+
+            if 'geos' not in rule._data():
+                default = pool._data()['values'][0]['value']
+                continue
+
+            match = {
+                'continents': [],
+                'countries': []
+            }
+            for geo in rule._data()['geos']:
+                codes = geo.split('-')
+                if len(codes) > 1:
+                    match['countries'].append(codes[1])
+                if not match['continents'].__contains__(codes[0]):
+                    match['continents'].append(codes[0])
+            match['data'] = pool._data()['values'][0]['value']
+            matches.append(match)
+
+        values = {
+            'matches': matches
+        }
+        if default:
+            values['default'] = default
+
+        return values
+
     def _apply_updates(self, zone, updates):
         self._client.record_updates(zone, {
-            "return_all_records": False,
-            "disallow_new_zone_creation": not self._client.create_zone,
-            "changes": updates
+            'return_all_records': False,
+            'disallow_new_zone_creation': not self._client.create_zone,
+            'changes': updates
         })
 
     def _apply(self, plan):
@@ -430,3 +589,12 @@ class ScalewayProvider(BaseProvider):
 
         # Clear out the cache if any
         self._zone_records.pop(desired.name, None)
+
+    def _process_desired_zone(self, desired):
+        for record in desired.records:
+            # test records
+            if getattr(record, 'dynamic', False):
+                self._params_dynamic(record.dynamic.pools,
+                                     record.dynamic.rules)
+
+        return super(ScalewayProvider, self)._process_desired_zone(desired)

@@ -55,7 +55,52 @@ ScalewayProvider supports A, AAAA, ALIAS, CAA, CNAME, LOC, MX, NAPTR, NS, PTR, S
 
 #### Dynamic
 
-ScalewayProvider does not support dynamic records.
+ScalewayProvider does partially support dynamic records.
+
+Specification:
+- Only Geo dynamic records are supported.
+- All the pool name must have this pattern: `pool-{n}` (eg: `pool-0`, `pool-1`, `pool-2`...)
+- Only one `value` per `values`.
+- The third Geo code isn't supported (eg: `NA`: ok, `EU-FR`: ok, `NA-US-KY`: not ok)
+- If you set the country code, you can't mix multiple continents within a same pool (eg: `EU-FR, EU-BE`: ok, `EU-FR, NA`: not ok)
+
+Full example:
+```yaml
+record-name:
+  dynamic:
+    pools:
+      pool-0:
+        fallback: pool-3
+        values:
+        - value: 1.1.1.1
+      pool-1:
+        fallback: pool-3
+        values:
+        - value: 2.2.2.2
+      pool-2:
+        fallback: pool-3
+        values:
+        - value: 3.3.3.3
+      pool-3:
+        values:
+        - value: 4.4.4.4
+    rules:
+    - geos:
+      - AS
+      - OC
+      pool: pool-0
+    - geos:
+      - EU-CH
+      - EU-FR
+      pool: pool-1
+    - geos:
+      - EU-BE
+      pool: pool-2
+    - pool: pool-3
+  ttl: 60
+  type: A
+  value: 5.5.5.5
+```
 
 ### Development
 
