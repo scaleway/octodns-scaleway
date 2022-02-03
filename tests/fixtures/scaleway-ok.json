@@ -126,6 +126,88 @@
       "ttl": 60,
       "type": "TXT",
       "comment": null
+    },
+    {
+      "id": "c7c859c1-9a62-43ba-820c-01145fb86842",
+      "data": "5.5.5.5",
+      "name": "a-dynamic",
+      "priority": 0,
+      "ttl": 600,
+      "type": "A",
+      "comment": null,
+      "geo_ip_config": {
+        "matches": [
+          {
+            "countries": [],
+            "continents": [
+              "AS",
+              "OC"
+            ],
+            "data": "1.1.1.1"
+          },
+          {
+            "countries": [
+              "CH",
+              "FR"
+            ],
+            "continents": [
+              "EU"
+            ],
+            "data": "2.2.2.2"
+          },
+          {
+            "countries": [
+              "BE"
+            ],
+            "continents": [
+              "EU"
+            ],
+            "data": "3.3.3.3"
+          }
+        ],
+        "default": "4.4.4.4"
+      }
+    },
+    {
+      "id": "37583e3e-8b58-481b-9c48-895c0f752bd5",
+      "data": "data-scaleway.com.",
+      "name": "cname-dynamic",
+      "priority": 0,
+      "ttl": 600,
+      "type": "CNAME",
+      "comment": null,
+      "geo_ip_config": {
+        "matches": [
+          {
+            "countries": [],
+            "continents": [
+              "AS",
+              "OC"
+            ],
+            "data": "1-scaleway.com."
+          },
+          {
+            "countries": [
+              "CH",
+              "FR"
+            ],
+            "continents": [
+              "EU"
+            ],
+            "data": "2-scaleway.com."
+          },
+          {
+            "countries": [
+              "BE"
+            ],
+            "continents": [
+              "EU"
+            ],
+            "data": "3-scaleway.com."
+          }
+        ],
+        "default": ""
+      }
     }
   ]
 }
