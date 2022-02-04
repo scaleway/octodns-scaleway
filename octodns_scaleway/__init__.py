@@ -556,11 +556,16 @@ class ScalewayProvider(BaseProvider):
                 'countries': []
             }
             for geo in rule._data()['geos']:
-                codes = geo.split('-')
-                if len(codes) > 1:
-                    match['countries'].append(codes[1])
-                if not match['continents'].__contains__(codes[0]):
-                    match['continents'].append(codes[0])
+                codes = GeoCodes.parse(geo)
+
+                if codes['province_code'] is not None:
+                    raise ScalewayProviderException('Geo province code '
+                                                    'isn\'t supported')
+                if codes['country_code'] is not None:
+                    match['countries'].append(codes['country_code'])
+                if not match['continents']\
+                   .__contains__(codes['continent_code']):
+                    match['continents'].append(codes['continent_code'])
 
             for value in pool._data()['values']:
                 # copy the math to avoid changing address match value

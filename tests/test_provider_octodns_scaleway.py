@@ -149,7 +149,7 @@ class TestScalewayProvider(TestCase):
                     },
                     {
                         'pool': 'pool-2',
-                        'geos': ['NA-US-KY']
+                        'geos': ['NA-US']
                     },
                     {
                         'pool': 'pool-3'
@@ -375,6 +375,30 @@ class TestScalewayProvider(TestCase):
             with self.assertRaises(ScalewayProviderException) as ctx:
                 provider.plan(zone_dynamic)
             self.assertEqual('Only accept geos, not weight or status',
+                             str(ctx.exception))
+
+            zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
+                'ttl': 300,
+                'type': 'A',
+                'value': '3.2.3.4',
+                'dynamic': {
+                    'pools': {
+                        'pool-0': {
+                            'values': [{
+                                'value': '1.1.1.1'
+                            }],
+                        },
+                    },
+                    'rules': [{
+                        'pool': 'pool-0',
+                        'geos': ['NA-US-KY']
+                    }]
+                }
+            }), replace=True)
+
+            with self.assertRaises(ScalewayProviderException) as ctx:
+                provider.plan(zone_dynamic)
+            self.assertEqual('Geo province code isn\'t supported',
                              str(ctx.exception))
 
         provider = ScalewayProvider('test', 'token', False)

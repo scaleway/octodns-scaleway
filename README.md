@@ -60,7 +60,7 @@ ScalewayProvider does partially support dynamic records.
 Specification:
 - Only Geo dynamic records are supported.
 - All the pool name must have this pattern: `pool-{n}` (eg: `pool-0`, `pool-1`, `pool-2`...)
-- The third Geo code isn't supported (eg: `NA`: ok, `EU-FR`: ok, `NA-US-KY`: not ok)
+- The Geo province code isn't supported (eg: `NA`: ok, `EU-FR`: ok, `NA-US-KY`: not ok)
 - If you set the country code, you can't mix multiple continents within a same pool (eg: `EU-FR, EU-BE`: ok, `EU-FR, NA`: not ok)
 
 Full example:
