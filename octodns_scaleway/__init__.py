@@ -54,7 +54,7 @@ class ScalewayClient(object):
         session = Session()
         session.headers.update({'x-auth-token': token})
         self._session = session
-        self.endpoint = 'https://api.scaleway.com/domain/v2beta1'
+        self.endpoint = 'http://127.0.0.1:4789/domain/v2beta1'
         self.create_zone = create_zone
 
     def _request(self, method, path, params={}, data=None):
@@ -100,14 +100,38 @@ class ScalewayProvider(BaseProvider):
 
         self._zone_records = {}
 
-    def _data_dynamic(self, geo_ip_config):
+    def _data_dynamic_geo(self, geo_ip_config):
         pools = {}
         rules = []
+
+        matches = []
+        self.log.info("-----------------")
+        # merge the sames matches for multiple values
+        for match in geo_ip_config['matches']:
+            match['datas'] = []
+            found = False
+            for _match in matches:
+                shared_items = {
+                    k: match[k]
+                    for k in match if k in _match and match[k] == _match[k]
+                }
+
+                # compare if the match have the same number of keys
+                # ans if they are shared all they items but data and datas
+                if len(match.keys()) == len(_match.keys()) \
+                   and len(shared_items) == len(_match.keys()) - 2:
+                    _match['datas'].append(match['data'])
+                    found = True
+                    break
+
+            if not found:
+                match['datas'] = [match['data']]
+                matches.append(match)
 
         # rules
         n = 0
         fallback = None
-        for match in geo_ip_config['matches']:
+        for match in matches:
             geos = []
             if 'countries' in match and len(match['countries']):
                 for country in match['countries']:
@@ -129,14 +153,17 @@ class ScalewayProvider(BaseProvider):
 
         # pools
         n = 0
-        for match in geo_ip_config['matches']:
-            pools[f'pool-{n}'] = {
-                'fallback': fallback if fallback else None,
-                'values': [{
-                    'value': match['data'],
+        for match in matches:
+            values = []
+            for data in match['datas']:
+                values.append({
+                    'value': data,
                     'weight': 1,
                     'status': 'obey'
-                }]
+                })
+            pools[f'pool-{n}'] = {
+                'fallback': fallback if fallback else None,
+                'values': values
             }
             n += 1
 
@@ -178,7 +205,7 @@ class ScalewayProvider(BaseProvider):
 
         for r in records:
             if 'geo_ip_config' in r:
-                record['dynamic'] = self._data_dynamic(r['geo_ip_config'])
+                record['dynamic'] = self._data_dynamic_geo(r['geo_ip_config'])
 
             record['values'].append(r['data'])
 
@@ -221,7 +248,7 @@ class ScalewayProvider(BaseProvider):
 
         for r in records:
             if 'geo_ip_config' in r:
-                record['dynamic'] = self._data_dynamic(r['geo_ip_config'])
+                record['dynamic'] = self._data_dynamic_geo(r['geo_ip_config'])
 
         return record
 
@@ -501,13 +528,7 @@ class ScalewayProvider(BaseProvider):
         for rule in rules:
             pool = pools[rule._data()['pool']]
 
-            # only accept 1 value ATM
-            if len(pool._data()['values']) != 1:
-                raise ScalewayProviderException('Only accept 1 value for '
-                                                'dynamic records')
-
             for value in pool._data()['values']:
-                self.log.info(value['weight'])
                 # only accept Geo ATM
                 #  octodns cannot have weight != 1 with only 1 value
                 # if value['weight'] != 1:
@@ -540,8 +561,12 @@ class ScalewayProvider(BaseProvider):
                     match['countries'].append(codes[1])
                 if not match['continents'].__contains__(codes[0]):
                     match['continents'].append(codes[0])
-            match['data'] = pool._data()['values'][0]['value']
-            matches.append(match)
+
+            for value in pool._data()['values']:
+                # copy the math to avoid changing address match value
+                m = match.copy()
+                m['data'] = value['value']
+                matches.append(m)
 
         values = {
             'matches': matches

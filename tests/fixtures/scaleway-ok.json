@@ -146,6 +146,14 @@
             "data": "1.1.1.1"
           },
           {
+            "countries": [],
+            "continents": [
+              "AS",
+              "OC"
+            ],
+            "data": "1.1.1.2"
+          },
+          {
             "countries": [
               "CH",
               "FR"

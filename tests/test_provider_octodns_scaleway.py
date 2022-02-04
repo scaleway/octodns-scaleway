@@ -165,9 +165,14 @@ class TestScalewayProvider(TestCase):
                 'pools': {
                     'pool-0': {
                         'fallback': None,
-                        'values': [{
-                            'value': '2.2.2.2',
-                        }],
+                        'values': [
+                            {
+                                'value': '2.2.2.2',
+                            },
+                            {
+                                'value': '2.2.2.3',
+                            }
+                        ],
                     },
                 },
                 'rules': [
@@ -355,30 +360,6 @@ class TestScalewayProvider(TestCase):
                 'dynamic': {
                     'pools': {
                         'pool-0': {
-                            'values': [
-                                {'value': '2.2.2.2'},
-                                {'value': '2.2.2.3'}
-                            ],
-                        },
-                    },
-                    'rules': [{
-                        'pool': 'pool-0'
-                    }]
-                }
-            }), replace=True)
-
-            with self.assertRaises(ScalewayProviderException) as ctx:
-                provider.plan(zone_dynamic)
-            self.assertEqual('Only accept 1 value for dynamic records',
-                             str(ctx.exception))
-
-            zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
-                'ttl': 300,
-                'type': 'A',
-                'value': '3.2.3.4',
-                'dynamic': {
-                    'pools': {
-                        'pool-0': {
                             'values': [{
                                 'value': '2.2.2.2',
                                 'status': 'up'
@@ -490,6 +471,11 @@ class TestScalewayProvider(TestCase):
                                                 'continents': ['EU'],
                                                 'countries': [],
                                                 'data': '2.2.2.2'
+                                            },
+                                            {
+                                                'continents': ['EU'],
+                                                'countries': [],
+                                                'data': '2.2.2.3'
                                             }
                                         ]
                                     }
