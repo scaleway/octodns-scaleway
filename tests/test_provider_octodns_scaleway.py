@@ -401,6 +401,40 @@ class TestScalewayProvider(TestCase):
             self.assertEqual('Geo province code isn\'t supported',
                              str(ctx.exception))
 
+            zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
+                'ttl': 300,
+                'type': 'A',
+                'value': '3.2.3.4',
+                'dynamic': {
+                    'pools': {
+                        'pool-0': {
+                            'values': [{
+                                'value': '1.1.1.1'
+                            }],
+                        },
+                        'fallback': {
+                            'values': [{
+                                'value': '2.2.2.2'
+                            }],
+                        },
+                    },
+                    'rules': [
+                        {
+                            'pool': 'pool-0',
+                            'geos': ['NA-US']
+                        },
+                        {
+                            'pool': 'fallback'
+                        }
+                    ]
+                }
+            }), replace=True)
+
+            with self.assertRaises(ScalewayProviderException) as ctx:
+                provider.plan(zone_dynamic)
+            self.assertEqual('Pool name "fallback" should be "pool-1"',
+                             str(ctx.exception))
+
         provider = ScalewayProvider('test', 'token', False)
         resp = Mock()
         resp.json = Mock()

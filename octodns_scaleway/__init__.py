@@ -525,6 +525,14 @@ class ScalewayProvider(BaseProvider):
         have_geo = False
         have_weight = False
         have_http_service = False
+
+        n = 0
+        for pool in pools:
+            # check pools names
+            if pool != f'pool-{n}':
+                raise ScalewayProviderException(f'Pool name "{pool}" should be "pool-{n}"')
+            n += 1
+
         for rule in rules:
             pool = pools[rule._data()['pool']]
 
