@@ -216,6 +216,27 @@
         ],
         "default": ""
       }
+    },
+    {
+      "id": "9801380c-5ec3-4562-be16-29f7e6e4ff77",
+      "data": "5.5.5.5",
+      "name": "a-weight-dynamic",
+      "priority": 0,
+      "ttl": 60,
+      "type": "A",
+      "comment": null,
+      "weighted_config": {
+        "weighted_ips": [
+          {
+            "ip": "1.1.1.3",
+            "weight": 1
+          },
+          {
+            "ip": "1.1.1.2",
+            "weight": 10
+          }
+        ]
+      }
     }
   ]
 }

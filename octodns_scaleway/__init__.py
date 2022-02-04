@@ -79,6 +79,7 @@ class ScalewayClient(object):
             return []
 
     def record_updates(self, zone_name, data):
+        self.log.debug(f'record_updates: zone_name={zone_name}, data={data}')
         self._request('PATCH', f'/dns-zones/{zone_name}/records',
                       data=data)
 
@@ -105,7 +106,6 @@ class ScalewayProvider(BaseProvider):
         rules = []
 
         matches = []
-        self.log.info("-----------------")
         # merge the sames matches for multiple values
         for match in geo_ip_config['matches']:
             match['datas'] = []
@@ -182,6 +182,29 @@ class ScalewayProvider(BaseProvider):
             'rules': rules
         }
 
+    def _data_dynamic_weight(self, weighted_config):
+        pools = {
+            'pool-0': {
+                'values': []
+            }
+        }
+        rules = [{
+            'pool': 'pool-0'
+        }]
+
+        values = []
+        for ips in weighted_config['weighted_ips']:
+            values.append({
+                'value': ips['ip'],
+                'weight': ips['weight']
+            })
+
+        pools['pool-0']['values'] = values
+        return {
+            'pools': pools,
+            'rules': rules
+        }
+
     def _data_for_multiple(self, _type, records):
         return {
             'ttl': records[0]['ttl'],
@@ -205,7 +228,11 @@ class ScalewayProvider(BaseProvider):
 
         for r in records:
             if 'geo_ip_config' in r:
-                record['dynamic'] = self._data_dynamic_geo(r['geo_ip_config'])
+                record['dynamic'] = self._data_dynamic_geo(
+                    r['geo_ip_config'])
+            elif 'weighted_config' in r:
+                record['dynamic'] = self._data_dynamic_weight(
+                    r['weighted_config'])
 
             record['values'].append(r['data'])
 
@@ -421,8 +448,7 @@ class ScalewayProvider(BaseProvider):
 
         records = getattr(self, f'_params_for_{record._type}')(record)
         if dynamic and len(records):
-            records[0]['geo_ip_config'] = dynamic
-            records = [records[0]]
+            records = [records[0] | dynamic]
 
         return records
 
@@ -520,8 +546,6 @@ class ScalewayProvider(BaseProvider):
         return self._params_for_multiple(record)
 
     def _params_dynamic(self, pools, rules):
-        matches = []
-        default = None
         have_geo = False
         have_weight = False
         have_http_service = False
@@ -530,62 +554,81 @@ class ScalewayProvider(BaseProvider):
         for pool in pools:
             # check pools names
             if pool != f'pool-{n}':
-                raise ScalewayProviderException(f'Pool name "{pool}" should be "pool-{n}"')
+                raise ScalewayProviderException(f'Pool name "{pool}" should be'
+                                                f' "pool-{n}"')
             n += 1
 
+        # check the type of dynamic record
         for rule in rules:
             pool = pools[rule._data()['pool']]
 
             for value in pool._data()['values']:
-                # only accept Geo ATM
-                #  octodns cannot have weight != 1 with only 1 value
-                # if value['weight'] != 1:
-                #    have_weight = True
-                #    raise ScalewayProviderException('Only accept geos, '
-                #                                    'not weight or status')
+                if value['weight'] != 1:
+                    have_weight = True
 
                 if value['status'] != 'obey':
                     have_http_service = True
-                    raise ScalewayProviderException('Only accept geos, '
-                                                    'not weight or status')
 
             if 'geos' in rule._data():
                 have_geo = True
 
-            if (have_weight + have_http_service + have_geo) == 0:
-                raise ScalewayProviderException('No dynamic type record found')
+        if (have_weight + have_http_service + have_geo) > 1:
+            raise ScalewayProviderException('Cannot mix dynamic record types '
+                                            '(geo, weight and service)')
 
-            if 'geos' not in rule._data():
-                default = pool._data()['values'][0]['value']
-                continue
+        values = {}
+        if have_geo:
+            matches = []
+            default = None
+            for rule in rules:
+                pool = pools[rule._data()['pool']]
+                if 'geos' not in rule._data():
+                    default = pool._data()['values'][0]['value']
+                    continue
 
-            match = {
-                'continents': [],
-                'countries': []
+                match = {
+                    'continents': [],
+                    'countries': []
+                }
+                for geo in rule._data()['geos']:
+                    codes = GeoCodes.parse(geo)
+
+                    if codes['province_code'] is not None:
+                        raise ScalewayProviderException('Geo province code '
+                                                        'isn\'t supported')
+                    if codes['country_code'] is not None:
+                        match['countries'].append(codes['country_code'])
+                    if not match['continents']\
+                       .__contains__(codes['continent_code']):
+                        match['continents'].append(codes['continent_code'])
+
+                for value in pool._data()['values']:
+                    # copy the math to avoid changing address match value
+                    m = match.copy()
+                    m['data'] = value['value']
+                    matches.append(m)
+
+            values['geo_ip_config'] = {
+                'matches': matches
             }
-            for geo in rule._data()['geos']:
-                codes = GeoCodes.parse(geo)
+            if default:
+                values['geo_ip_config']['default'] = default
 
-                if codes['province_code'] is not None:
-                    raise ScalewayProviderException('Geo province code '
-                                                    'isn\'t supported')
-                if codes['country_code'] is not None:
-                    match['countries'].append(codes['country_code'])
-                if not match['continents']\
-                   .__contains__(codes['continent_code']):
-                    match['continents'].append(codes['continent_code'])
+        elif have_weight:
+            values['weighted_config'] = {
+                'weighted_ips': []
+            }
+            for value in pools['pool-0']._data()['values']:
+                values['weighted_config']['weighted_ips'].append({
+                    'ip': value['value'],
+                    'weight': value['weight']
+                })
 
-            for value in pool._data()['values']:
-                # copy the math to avoid changing address match value
-                m = match.copy()
-                m['data'] = value['value']
-                matches.append(m)
-
-        values = {
-            'matches': matches
-        }
-        if default:
-            values['default'] = default
+        elif have_http_service:
+            raise ScalewayProviderException('Only accept geos or '
+                                            'weight, not status')
+        else:
+            raise ScalewayProviderException('No dynamic type record found')
 
         return values
 

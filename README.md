@@ -58,14 +58,14 @@ ScalewayProvider supports A, AAAA, ALIAS, CAA, CNAME, LOC, MX, NAPTR, NS, PTR, S
 ScalewayProvider does partially support dynamic records.
 
 Specification:
-- Only Geo dynamic records are supported.
+- Only Geo and weight dynamic records are supported, and cannot be combined.
 - All the pool name must have this pattern: `pool-{n}` (eg: `pool-0`, `pool-1`, `pool-2`...)
 - The Geo province code isn't supported (eg: `NA`: ok, `EU-FR`: ok, `NA-US-KY`: not ok)
 - If you set the country code, you can't mix multiple continents within a same pool (eg: `EU-FR, EU-BE`: ok, `EU-FR, NA`: not ok)
 
 Full example:
 ```yaml
-record-name:
+record-dynamic-geo:
   dynamic:
     pools:
       pool-0:
@@ -97,6 +97,21 @@ record-name:
       - EU-BE
       pool: pool-2
     - pool: pool-3
+  ttl: 60
+  type: A
+  value: 5.5.5.5
+
+record-dynamic-weigh:
+  dynamic:
+    pools:
+      pool-0:
+        values:
+        - value: 1.1.1.1
+          weight: 1
+        - value: 1.1.1.2
+          weight: 100
+    rules:
+    - pool: pool-0
   ttl: 60
   type: A
   value: 5.5.5.5

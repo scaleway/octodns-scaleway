@@ -182,6 +182,32 @@ class TestScalewayProvider(TestCase):
                     }
                 ]
             }
+        }),
+        ('dynamic3', {
+            'ttl': 1800,
+            'type': 'A',
+            'value': '1.1.1.1',
+            'dynamic': {
+                'pools': {
+                    'pool-0': {
+                        'values': [
+                            {
+                                'value': '2.2.2.2',
+                                'weight': 1,
+                            },
+                            {
+                                'value': '2.2.2.3',
+                                'weight': 10
+                            }
+                        ],
+                    },
+                },
+                'rules': [
+                    {
+                        'pool': 'pool-0'
+                    }
+                ]
+            }
         })
     ):
         expected.add_record(Record.new(expected, name, data))
@@ -248,16 +274,16 @@ class TestScalewayProvider(TestCase):
             zone = Zone('unit.tests.', [])
 
             provider.populate(zone)
-            self.assertEqual(13, len(zone.records))
+            self.assertEqual(14, len(zone.records))
             changes = self.expected.changes(zone, provider)
-            self.assertEqual(23, len(changes))
+            self.assertEqual(25, len(changes))
 
         # 2nd populate makes no network calls/all from cache
         again = Zone('unit.tests.', [])
         provider.populate(again)
-        self.assertEqual(13, len(again.records))
+        self.assertEqual(14, len(again.records))
         changes = self.expected.changes(zone, provider)
-        self.assertEqual(23, len(changes))
+        self.assertEqual(25, len(changes))
 
         # bust the cache
         del provider._zone_records[zone.name]
@@ -374,7 +400,7 @@ class TestScalewayProvider(TestCase):
 
             with self.assertRaises(ScalewayProviderException) as ctx:
                 provider.plan(zone_dynamic)
-            self.assertEqual('Only accept geos, not weight or status',
+            self.assertEqual('Only accept geos or weight, not status',
                              str(ctx.exception))
 
             zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
@@ -399,6 +425,37 @@ class TestScalewayProvider(TestCase):
             with self.assertRaises(ScalewayProviderException) as ctx:
                 provider.plan(zone_dynamic)
             self.assertEqual('Geo province code isn\'t supported',
+                             str(ctx.exception))
+
+            zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
+                'ttl': 300,
+                'type': 'A',
+                'value': '3.2.3.4',
+                'dynamic': {
+                    'pools': {
+                        'pool-0': {
+                            'values': [
+                                {
+                                    'value': '1.1.1.1',
+                                    'weight': 1
+                                },
+                                {
+                                    'value': '2.2.2.2',
+                                    'weight': 10
+                                }
+                            ],
+                        },
+                    },
+                    'rules': [{
+                        'pool': 'pool-0',
+                        'geos': ['NA-US']
+                    }]
+                }
+            }), replace=True)
+
+            with self.assertRaises(ScalewayProviderException) as ctx:
+                provider.plan(zone_dynamic)
+            self.assertEqual('Cannot mix dynamic record types (geo, weight and service)',
                              str(ctx.exception))
 
             zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
@@ -534,6 +591,30 @@ class TestScalewayProvider(TestCase):
                                                 'continents': ['EU'],
                                                 'countries': [],
                                                 'data': '2.2.2.3'
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        'add': {
+                            'records': [
+                                {
+                                    'name': 'dynamic3',
+                                    'ttl': 1800,
+                                    'type': 'A',
+                                    'data': '1.1.1.1',
+                                    'weighted_config': {
+                                        'weighted_ips': [
+                                            {
+                                                'ip': '2.2.2.2',
+                                                'weight': 1
+                                            },
+                                            {
+                                                'ip': '2.2.2.3',
+                                                'weight': 10
                                             }
                                         ]
                                     }
