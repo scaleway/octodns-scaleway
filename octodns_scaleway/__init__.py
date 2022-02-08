@@ -12,6 +12,7 @@ from octodns.provider import ProviderException
 from octodns.provider.base import BaseProvider
 
 __VERSION__ = '0.0.1'
+__API_VERSION__ = 'v2beta1'
 
 
 class ScalewayClientException(ProviderException):
@@ -54,7 +55,7 @@ class ScalewayClient(object):
         session = Session()
         session.headers.update({'x-auth-token': token})
         self._session = session
-        self.endpoint = 'http://127.0.0.1:4789/domain/v2beta1'
+        self.endpoint = f'https://api.scaleway.com/domain/{__API_VERSION__}'
         self.create_zone = create_zone
 
     def _request(self, method, path, params={}, data=None):
@@ -443,8 +444,7 @@ class ScalewayProvider(BaseProvider):
     def _params(self, record):
         dynamic = {}
         if getattr(record, 'dynamic', False):
-            dynamic = self._params_dynamic(record.dynamic.pools,
-                                           record.dynamic.rules)
+            dynamic = self._params_dynamic(record)
 
         records = getattr(self, f'_params_for_{record._type}')(record)
         if dynamic and len(records):
@@ -545,10 +545,14 @@ class ScalewayProvider(BaseProvider):
                          f'{v.fingerprint}' for v in record.values]
         return self._params_for_multiple(record)
 
-    def _params_dynamic(self, pools, rules):
+    def _params_dynamic(self, record):
         have_geo = False
         have_weight = False
         have_http_service = False
+
+        pools = record.dynamic.pools
+        rules = record.dynamic.rules
+        healthcheck = record._octodns.get('healthcheck', {})
 
         n = 0
         for pool in pools:
@@ -559,15 +563,15 @@ class ScalewayProvider(BaseProvider):
             n += 1
 
         # check the type of dynamic record
+        if healthcheck != {}:
+            have_http_service = True
+
         for rule in rules:
             pool = pools[rule._data()['pool']]
 
             for value in pool._data()['values']:
                 if value['weight'] != 1:
                     have_weight = True
-
-                if value['status'] != 'obey':
-                    have_http_service = True
 
             if 'geos' in rule._data():
                 have_geo = True
@@ -625,8 +629,16 @@ class ScalewayProvider(BaseProvider):
                 })
 
         elif have_http_service:
-            raise ScalewayProviderException('Only accept geos or '
-                                            'weight, not status')
+            values['http_service_config'] = {
+                'ips': [],
+                'must_contain': None,
+                'url': f'{record.healthcheck_protocol}://{record.healthcheck_host()}:{record.healthcheck_port}{record.healthcheck_path}',
+                'user_agent': f'scaleway-octodns/{__VERSION__}',
+                'strategy': 'all'
+            }
+            for value in pools['pool-0']._data()['values']:
+                values['http_service_config']['ips'].append(value['value'])
+
         else:
             raise ScalewayProviderException('No dynamic type record found')
 
@@ -675,7 +687,6 @@ class ScalewayProvider(BaseProvider):
         for record in desired.records:
             # test records
             if getattr(record, 'dynamic', False):
-                self._params_dynamic(record.dynamic.pools,
-                                     record.dynamic.rules)
+                self._params_dynamic(record)
 
         return super(ScalewayProvider, self)._process_desired_zone(desired)
