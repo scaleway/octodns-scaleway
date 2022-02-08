@@ -208,6 +208,38 @@ class TestScalewayProvider(TestCase):
                     }
                 ]
             }
+        }),
+        ('dynamic4', {
+            'ttl': 1800,
+            'type': 'A',
+            'value': '1.1.1.1',
+            'dynamic': {
+                'pools': {
+                    'pool-0': {
+                        'values': [
+                            {
+                                'value': '2.2.2.2'
+                            },
+                            {
+                                'value': '2.2.2.3'
+                            }
+                        ],
+                    },
+                },
+                'rules': [
+                    {
+                        'pool': 'pool-0'
+                    }
+                ]
+            },
+            'octodns': {
+                'healthcheck': {
+                    'host': '127.0.0.1',
+                    'path': '/check',
+                    'port': '443',
+                    'protocol': 'HTTPS'
+                }
+            }
         })
     ):
         expected.add_record(Record.new(expected, name, data))
@@ -276,14 +308,14 @@ class TestScalewayProvider(TestCase):
             provider.populate(zone)
             self.assertEqual(14, len(zone.records))
             changes = self.expected.changes(zone, provider)
-            self.assertEqual(25, len(changes))
+            self.assertEqual(26, len(changes))
 
         # 2nd populate makes no network calls/all from cache
         again = Zone('unit.tests.', [])
         provider.populate(again)
         self.assertEqual(14, len(again.records))
         changes = self.expected.changes(zone, provider)
-        self.assertEqual(25, len(changes))
+        self.assertEqual(26, len(changes))
 
         # bust the cache
         del provider._zone_records[zone.name]
@@ -377,30 +409,6 @@ class TestScalewayProvider(TestCase):
             with self.assertRaises(ScalewayProviderException) as ctx:
                 provider.plan(zone_dynamic)
             self.assertEqual('No dynamic type record found',
-                             str(ctx.exception))
-
-            zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
-                'ttl': 300,
-                'type': 'A',
-                'value': '3.2.3.4',
-                'dynamic': {
-                    'pools': {
-                        'pool-0': {
-                            'values': [{
-                                'value': '2.2.2.2',
-                                'status': 'up'
-                            }],
-                        },
-                    },
-                    'rules': [{
-                        'pool': 'pool-0'
-                    }]
-                }
-            }), replace=True)
-
-            with self.assertRaises(ScalewayProviderException) as ctx:
-                provider.plan(zone_dynamic)
-            self.assertEqual('Only accept geos or weight, not status',
                              str(ctx.exception))
 
             zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
@@ -617,6 +625,25 @@ class TestScalewayProvider(TestCase):
                                                 'weight': 10
                                             }
                                         ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        'add': {
+                            'records': [
+                                {
+                                    'name': 'dynamic4',
+                                    'ttl': 1800,
+                                    'type': 'A',
+                                    'data': '1.1.1.1',
+                                    'http_service_config': {
+                                        'ips': ['2.2.2.2', '2.2.2.3'],
+                                        'must_contain': None,
+                                        'url': 'HTTPS://127.0.0.1:443/check',
+                                        'user_agent': 'scaleway-octodns/0.0.1',
+                                        'strategy': 'all'
                                     }
                                 }
                             ]
