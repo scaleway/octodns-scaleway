@@ -632,7 +632,9 @@ class ScalewayProvider(BaseProvider):
             values['http_service_config'] = {
                 'ips': [],
                 'must_contain': None,
-                'url': f'{record.healthcheck_protocol}://{record.healthcheck_host()}:{record.healthcheck_port}{record.healthcheck_path}',
+                'url': f'{record.healthcheck_protocol}://'
+                       f'{record.healthcheck_host()}:{record.healthcheck_port}'
+                       f'{record.healthcheck_path}',
                 'user_agent': f'scaleway-octodns/{__VERSION__}',
                 'strategy': 'all'
             }

@@ -463,7 +463,8 @@ class TestScalewayProvider(TestCase):
 
             with self.assertRaises(ScalewayProviderException) as ctx:
                 provider.plan(zone_dynamic)
-            self.assertEqual('Cannot mix dynamic record types (geo, weight and service)',
+            self.assertEqual('Cannot mix dynamic record types '
+                             '(geo, weight and service)',
                              str(ctx.exception))
 
             zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
