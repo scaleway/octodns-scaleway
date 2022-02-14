@@ -17,7 +17,7 @@ if [ ! -f "$ACTIVATE" ]; then
 fi
 . "$ACTIVATE"
 
-VERSION="$(grep __VERSION__ "$ROOT/octodns_scaleway/__init__.py" | sed -e "s/.* = '//" -e "s/'$//")"
+VERSION="$(grep __VERSION__ "$ROOT/octodns_scaleway/__init__.py" | sed -e "s/.* = '//" -e "s/'$//" -e "/ .*/d")"
 
 git tag -s "v$VERSION" -m "Release $VERSION"
 git push origin "v$VERSION"
