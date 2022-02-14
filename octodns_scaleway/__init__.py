@@ -11,7 +11,7 @@ from octodns.record.geo import GeoCodes
 from octodns.provider import ProviderException
 from octodns.provider.base import BaseProvider
 
-__VERSION__ = '0.0.1'
+__VERSION__ = '0.0.2'
 __API_VERSION__ = 'v2beta1'
 
 

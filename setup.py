@@ -31,7 +31,7 @@ setup(
         'octodns>=0.9.14',
         'requests>=2.27.0',
     ),
-    url='https://github.com/octodns/octodns-scaleway',
+    url='https://github.com/scaleway/octodns-scaleway',
     version=version(),
     tests_require=(
         'mock>=4.0.3',
