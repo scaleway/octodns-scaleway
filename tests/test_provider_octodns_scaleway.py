@@ -518,7 +518,7 @@ class TestScalewayProvider(TestCase):
         self.assertFalse(plan.exists)
 
         provider._client._request.assert_has_calls([
-            # created at least some of the record with expected data
+            # created some of the record with expected data
             call('GET', '/dns-zones/unit.tests/records?page_size=1000'),
             call('PATCH', '/dns-zones/unit.tests/records', data={
                 'return_all_records': False,
