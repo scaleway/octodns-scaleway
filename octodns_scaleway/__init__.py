@@ -217,11 +217,7 @@ class ScalewayProvider(BaseProvider):
             'pool': 'pool-0'
         }]
 
-        values = []
-        for ip in http_service_config['ips']:
-            values.append({
-                'value': ip
-            })
+        values = [{'value': ip} for ip in http_service_config['ips']]
 
         pools['pool-0']['values'] = values
         url = urlparse(http_service_config['url'])
