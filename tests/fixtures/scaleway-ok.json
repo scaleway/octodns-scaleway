@@ -237,6 +237,26 @@
           }
         ]
       }
+    },
+    {
+      "id": "1002c848-ef57-48eb-863b-9992265dd2b4",
+      "data": "5.5.5.5",
+      "name": "a-healthcheck-dynamic",
+      "priority": 0,
+      "ttl": 60,
+      "type": "A",
+      "comment": null,
+      "http_service_config": {
+        "ips": [
+          "1.2.3.4",
+          "2.3.4.5",
+          "3.4.5.6"
+        ],
+        "must_contain": null,
+        "url": "HTTPS://scaleway.com:443/check",
+        "user_agent": "scaleway-octodns/0.0.2",
+        "strategy": "all"
+      }
     }
   ]
 }

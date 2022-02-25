@@ -51,7 +51,7 @@ If set to `False`, use the root zone.
 
 #### Records
 
-ScalewayProvider supports A, AAAA, ALIAS, CAA, CNAME, LOC, MX, NAPTR, NS, PTR, SPF, SRV, SSHFP, TXT
+ScalewayProvider supports A, AAAA, ALIAS, CAA, CNAME, DNAME, LOC, MX, NAPTR, NS, PTR, SPF, SRV, SSHFP, TXT
 
 #### Dynamic
 
