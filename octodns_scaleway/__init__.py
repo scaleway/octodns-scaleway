@@ -5,13 +5,14 @@
 from collections import defaultdict
 from requests import Session
 from logging import getLogger
+from urllib.parse import urlparse
 
 from octodns.record import Record
 from octodns.record.geo import GeoCodes
 from octodns.provider import ProviderException
 from octodns.provider.base import BaseProvider
 
-__VERSION__ = '0.0.2'
+__VERSION__ = '0.0.3'
 __API_VERSION__ = 'v2beta1'
 
 
@@ -89,9 +90,9 @@ class ScalewayProvider(BaseProvider):
     SUPPORTS_GEO = False
     SUPPORTS_DYNAMIC = True
     SUPPORTS_POOL_VALUE_STATUS = False
-    SUPPORTS = set((['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'LOC', 'MX',
-                     'NAPTR', 'NS', 'PTR', 'SPF', 'SRV', 'SSHFP',
-                     'TXT']))
+    SUPPORTS = set((['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'DNAME',
+                     'LOC', 'MX', 'NAPTR', 'NS', 'PTR', 'SPF',
+                     'SRV', 'SSHFP', 'TXT']))
 
     def __init__(self, id, token, create_zone=False, *args, **kwargs):
         self.log = getLogger(f'ScalewayProvider[{id}]')
@@ -206,6 +207,28 @@ class ScalewayProvider(BaseProvider):
             'rules': rules
         }
 
+    def _data_dynamic_healthcheck(self, http_service_config):
+        url = urlparse(http_service_config['url'])
+        return {
+            'pools': {
+                'pool-0': {
+                    'values': [{'value': ip} for ip in
+                               http_service_config['ips']]
+                }
+            },
+            'rules': [{
+                'pool': 'pool-0'
+            }],
+            'octodns': {
+                'healthcheck': {
+                    'host': url.hostname,
+                    'path': url.path,
+                    'port': url.port,
+                    'protocol': url.scheme.upper()
+                }
+            }
+        }
+
     def _data_for_multiple(self, _type, records):
         return {
             'ttl': records[0]['ttl'],
@@ -234,6 +257,14 @@ class ScalewayProvider(BaseProvider):
             elif 'weighted_config' in r:
                 record['dynamic'] = self._data_dynamic_weight(
                     r['weighted_config'])
+            elif 'http_service_config' in r:
+                healthcheck = self._data_dynamic_healthcheck(
+                    r['http_service_config'])
+                record['dynamic'] = {
+                    'pools': healthcheck['pools'],
+                    'rules': healthcheck['rules']
+                }
+                record['octodns'] = healthcheck['octodns']
 
             record['values'].append(r['data'])
 
@@ -245,6 +276,7 @@ class ScalewayProvider(BaseProvider):
 
     _data_for_ALIAS = _data_for_single
     _data_for_PTR = _data_for_single
+    _data_for_DNAME = _data_for_single
 
     def _data_for_CAA(self, _type, records):
         values = []
@@ -503,6 +535,7 @@ class ScalewayProvider(BaseProvider):
 
     _params_for_ALIAS = _params_for_single
     _params_for_CNAME = _params_for_single
+    _params_for_DNAME = _params_for_single
     _params_for_PTR = _params_for_single
 
     def _params_for_CAA(self, record):

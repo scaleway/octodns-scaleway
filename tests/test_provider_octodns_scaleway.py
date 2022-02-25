@@ -306,16 +306,16 @@ class TestScalewayProvider(TestCase):
             zone = Zone('unit.tests.', [])
 
             provider.populate(zone)
-            self.assertEqual(14, len(zone.records))
+            self.assertEqual(15, len(zone.records))
             changes = self.expected.changes(zone, provider)
-            self.assertEqual(26, len(changes))
+            self.assertEqual(27, len(changes))
 
         # 2nd populate makes no network calls/all from cache
         again = Zone('unit.tests.', [])
         provider.populate(again)
-        self.assertEqual(14, len(again.records))
+        self.assertEqual(15, len(again.records))
         changes = self.expected.changes(zone, provider)
-        self.assertEqual(26, len(changes))
+        self.assertEqual(27, len(changes))
 
         # bust the cache
         del provider._zone_records[zone.name]
@@ -643,7 +643,7 @@ class TestScalewayProvider(TestCase):
                                         'ips': ['2.2.2.2', '2.2.2.3'],
                                         'must_contain': None,
                                         'url': 'HTTPS://127.0.0.1:443/check',
-                                        'user_agent': 'scaleway-octodns/0.0.2',
+                                        'user_agent': 'scaleway-octodns/0.0.3',
                                         'strategy': 'all'
                                     }
                                 }

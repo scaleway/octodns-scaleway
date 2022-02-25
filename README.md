@@ -19,7 +19,7 @@ Pinning specific versions or SHAs is recommended to avoid unplanned upgrades.
 ```
 # Start with the latest versions and don't just copy what's here
 octodns==0.9.14
-octodns_scaleway==0.0.1
+octodns_scaleway==0.0.3
 ```
 
 ##### SHAs
@@ -51,7 +51,7 @@ If set to `False`, use the root zone.
 
 #### Records
 
-ScalewayProvider supports A, AAAA, ALIAS, CAA, CNAME, LOC, MX, NAPTR, NS, PTR, SPF, SRV, SSHFP, TXT
+ScalewayProvider supports A, AAAA, ALIAS, CAA, CNAME, DNAME, LOC, MX, NAPTR, NS, PTR, SPF, SRV, SSHFP, TXT
 
 #### Dynamic
 
