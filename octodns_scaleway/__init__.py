@@ -208,22 +208,17 @@ class ScalewayProvider(BaseProvider):
         }
 
     def _data_dynamic_healthcheck(self, http_service_config):
-        pools = {
-            'pool-0': {
-                'values': []
-            }
-        }
-        rules = [{
-            'pool': 'pool-0'
-        }]
-
-        values = [{'value': ip} for ip in http_service_config['ips']]
-
-        pools['pool-0']['values'] = values
         url = urlparse(http_service_config['url'])
         return {
-            'pools': pools,
-            'rules': rules,
+            'pools': {
+                'pool-0': {
+                    'values': [{'value': ip} for ip in
+                               http_service_config['ips']]
+                }
+            },
+            'rules': [{
+                'pool': 'pool-0'
+            }],
             'octodns': {
                 'healthcheck': {
                     'host': url.hostname,
