@@ -643,7 +643,7 @@ class TestScalewayProvider(TestCase):
                                         'ips': ['2.2.2.2', '2.2.2.3'],
                                         'must_contain': None,
                                         'url': 'HTTPS://127.0.0.1:443/check',
-                                        'user_agent': 'scaleway-octodns/0.0.3',
+                                        'user_agent': 'scaleway-octodns/0.0.4',
                                         'strategy': 'all'
                                     }
                                 }
