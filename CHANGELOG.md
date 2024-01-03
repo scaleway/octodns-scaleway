@@ -1,3 +1,7 @@
+## v0.0.4 - 2023-01-03 - Create
+
+* build(deps): remove py library usage
+
 ## v0.0.3 - 2022-02-25 - Create
 
 * feat: add DNAME record type
