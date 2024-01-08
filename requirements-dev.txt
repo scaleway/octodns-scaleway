@@ -1,4 +1,4 @@
-Pygments==2.11.1
+Pygments>=2.15.0
 attrs==21.4.0
 bleach==4.1.0
 build==0.7.0
