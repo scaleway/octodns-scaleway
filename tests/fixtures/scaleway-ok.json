@@ -254,7 +254,7 @@
         ],
         "must_contain": null,
         "url": "HTTPS://scaleway.com:443/check",
-        "user_agent": "scaleway-octodns/0.0.3",
+        "user_agent": "scaleway-octodns/0.0.4",
         "strategy": "all"
       }
     }
