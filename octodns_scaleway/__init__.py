@@ -428,10 +428,11 @@ class ScalewayProvider(BaseProvider):
         }
 
     def _data_for_TXT(self, _type, records):
+        values = [record['data'].replace(';', '\\;') for record in records]
         return {
             'ttl': records[0]['ttl'],
             'type': _type,
-            'values': [records[0]['data']]
+            'values': values
         }
 
     _data_for_SPF = _data_for_TXT
@@ -519,7 +520,7 @@ class ScalewayProvider(BaseProvider):
                 'name': self._record_name(record.name),
                 'ttl': record.ttl,
                 'type': record._type,
-                'data': value,
+                'data': value.replace('\\;', ';'),
             })
 
         return params
