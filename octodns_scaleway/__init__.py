@@ -431,7 +431,7 @@ class ScalewayProvider(BaseProvider):
         return {
             'ttl': records[0]['ttl'],
             'type': _type,
-            'values': [records[0]['data']]
+            'values': [record['data'] for record in records]
         }
 
     _data_for_SPF = _data_for_TXT

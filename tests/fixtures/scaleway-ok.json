@@ -128,6 +128,24 @@
       "comment": null
     },
     {
+      "id": "550a8400-e29b-41d4-a716-446655440000",
+      "data": "google-site-verification=XXXXXX",
+      "name": "",
+      "priority": 0,
+      "ttl": 600,
+      "type": "TXT",
+      "comment": null
+    },
+    {
+      "id": "550a8400-e29b-41d4-a716-446655440001",
+      "data": "v=spf1 include:domain.org ~all",
+      "name": "",
+      "priority": 0,
+      "ttl": 600,
+      "type": "TXT",
+      "comment": null
+    },
+    {
       "id": "c7c859c1-9a62-43ba-820c-01145fb86842",
       "data": "5.5.5.5",
       "name": "a-dynamic",

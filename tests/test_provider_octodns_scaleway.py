@@ -306,16 +306,21 @@ class TestScalewayProvider(TestCase):
             zone = Zone('unit.tests.', [])
 
             provider.populate(zone)
-            self.assertEqual(15, len(zone.records))
+            self.assertEqual(16, len(zone.records))
             changes = self.expected.changes(zone, provider)
-            self.assertEqual(27, len(changes))
+            self.assertEqual(28, len(changes))
+            
+            # Verify multiple TXT records with the same name get handled correctly
+            root_txt = list(filter(lambda r: r.name == '' and r._type == 'TXT', zone.records))
+            self.assertEqual(1, len(root_txt))
+            self.assertEqual(2, len(root_txt[0].values))
 
         # 2nd populate makes no network calls/all from cache
         again = Zone('unit.tests.', [])
         provider.populate(again)
-        self.assertEqual(15, len(again.records))
+        self.assertEqual(16, len(again.records))
         changes = self.expected.changes(zone, provider)
-        self.assertEqual(27, len(changes))
+        self.assertEqual(28, len(changes))
 
         # bust the cache
         del provider._zone_records[zone.name]
