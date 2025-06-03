@@ -835,7 +835,7 @@ class ScalewayProvider(BaseProvider):
             if change.data["record_type"].lower() == "ds":
                 if class_name in ['create', 'update']:
                     udpate_dnssec = self._params(change.new)
-                # Avoid checking if DNSSEC will already be disabled
+                # If DNSSEC is already disabled, skip the check to disable it
                 elif not disable_dnssec:
                     # Disable DNSSEC if we remove the last DS record
                     found_ds = False
@@ -858,7 +858,7 @@ class ScalewayProvider(BaseProvider):
         try:
             record_to_updates = deletes + updates + creates
             if record_to_updates:
-                self._apply_updates(zone, deletes + updates + creates)
+                self._apply_updates(zone, record_to_updates)
             # DNSSEC use a dedicated endpoint
             if disable_dnssec:
                 self._apply_disable_dnssec(zone)
