@@ -8,13 +8,17 @@ jobs:
       fail-fast: false
       matrix:
         # Tested versions based on dates in https://devguide.python.org/devcycle/#end-of-life-branches
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5.6.0
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      - name: CI Build
-        run: |
+      - name: Install octodns-scaleway
+        run: pip install -e .
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run pytest
+        run: pytest --disable-network --log-cli-level=DEBUG --log-cli-format="%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)" --log-cli-date-format="%Y-%m-%d %H:%M:%S"

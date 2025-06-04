@@ -18,8 +18,8 @@ Pinning specific versions or SHAs is recommended to avoid unplanned upgrades.
 
 ```
 # Start with the latest versions and don't just copy what's here
-octodns==0.9.14
-octodns_scaleway==0.0.4
+octodns==1.11.0
+octodns_scaleway==0.1.0
 ```
 
 ##### SHAs
@@ -43,6 +43,7 @@ providers:
 ```
 
 #### Create Zone
+
 Optional argument *(default: `False`)*.  
 If set to `True`, Automaticaly create new zone when needed. **Be carreful: create a new zone can add fee.**  
 If set to `False`, use the root zone.
@@ -58,12 +59,14 @@ ScalewayProvider supports A, AAAA, ALIAS, CAA, CNAME, DNAME, LOC, MX, NAPTR, NS,
 ScalewayProvider does partially support dynamic records.
 
 Specification:
+
 - All the pool name must have this pattern: `pool-{n}` (eg: `pool-0`, `pool-1`, `pool-2`...)
 - The Geo province code isn't supported (eg: `NA`: ok, `EU-FR`: ok, `NA-US-KY`: not ok)
 - If you set the country code, you can't mix multiple continents within a same pool (eg: `EU-FR, EU-BE`: ok, `EU-FR, NA`: not ok)
 - Healthcheck only accept the default `obey` status
 
 Full example:
+
 ```yaml
 record-dynamic-geo:
   dynamic:
