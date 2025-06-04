@@ -26,7 +26,7 @@ setup(
     long_description_content_type='text/markdown',
     name='octodns-scaleway',
     packages=find_packages(),
-    python_requires='>=3.8',
+    python_requires='>=3.9',
     install_requires=(
         'octodns>=1.0.0',
         'requests>=2.27.0',
