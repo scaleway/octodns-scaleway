@@ -2,18 +2,43 @@
 #
 #
 
+from enum import Enum
 from collections import defaultdict
 from requests import Session
 from logging import getLogger
 from urllib.parse import urlparse
 
 from octodns.record import Record
+from octodns.record.ds import DsValue
 from octodns.record.geo import GeoCodes
 from octodns.provider import ProviderException
 from octodns.provider.base import BaseProvider
 
-__VERSION__ = '0.0.4'
+__VERSION__ = '0.1.0'
 __API_VERSION__ = 'v2beta1'
+
+
+class ScalewayDSAlgorithm(Enum):
+    rsamd5 = 1
+    dh = 2
+    dsa = 3
+    rsasha1 = 5
+    dsa_nsec3_sha1 = 6
+    rsasha1_nsec3_sha1 = 7
+    rsasha256 = 8
+    rsasha512 = 10
+    ecc_gost = 12
+    ecdsap256sha256 = 13
+    ecdsap384sha384 = 14
+    ed25519 = 15
+    ed448 = 16
+
+
+class ScalewayDSDigestType(Enum):
+    sha_1 = 1
+    sha_256 = 2
+    gost_r_34_11_94 = 3
+    sha_384 = 4
 
 
 class ScalewayClientException(ProviderException):
@@ -80,19 +105,37 @@ class ScalewayClient(object):
         except ScalewayClientForbidden:
             return []
 
+    def zone_ds_records(self, domain):
+        try:
+            return self._request('GET', f'/domains/{domain}'
+                                 ).json()['dnssec']['ds_records']
+        except ScalewayClientForbidden:
+            return []
+
     def record_updates(self, zone_name, data):
         self.log.debug(f'record_updates: zone_name={zone_name}, data={data}')
         self._request('PATCH', f'/dns-zones/{zone_name}/records',
                       data=data)
 
+    def dnssec_enable(self, domain, data):
+        self.log.debug(f'dnssec_enable: domain={domain}, data={data}')
+        self._request('POST', f'/domains/{domain}/enable-dnssec',
+                      data=data)
+
+    def dnssec_disable(self, domain):
+        self.log.debug(f'dnssec_disable: domain={domain}')
+        self._request('POST', f'/domains/{domain}/disable-dnssec')
+
 
 class ScalewayProvider(BaseProvider):
     SUPPORTS_GEO = False
     SUPPORTS_DYNAMIC = True
+    SUPPORTS_ROOT_NS = True
     SUPPORTS_POOL_VALUE_STATUS = False
     SUPPORTS = set((['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'DNAME',
-                     'LOC', 'MX', 'NAPTR', 'NS', 'PTR', 'SPF',
+                     'DS', 'LOC', 'MX', 'NAPTR', 'NS', 'PTR', 'SPF',
                      'SRV', 'SSHFP', 'TXT']))
+    OLD_DS_FIELDS = hasattr(DsValue, 'flags')
 
     def __init__(self, id, token, create_zone=False, *args, **kwargs):
         self.log = getLogger(f'ScalewayProvider[{id}]')
@@ -102,6 +145,7 @@ class ScalewayProvider(BaseProvider):
         self._client = ScalewayClient(token, id, create_zone)
 
         self._zone_records = {}
+        self._zone_ds_records = {}
 
     def _data_dynamic_geo(self, geo_ip_config):
         pools = {}
@@ -312,6 +356,34 @@ class ScalewayProvider(BaseProvider):
 
         return record
 
+    def _data_for_DS(self, _type, records):
+        values = []
+        for record in records:
+            if "key_id" not in record:
+                # Invalid record
+                continue
+            if self.OLD_DS_FIELDS:
+                value = {
+                    'flags': record["key_id"],
+                    'protocol':
+                        ScalewayDSAlgorithm[record["algorithm"]].value,
+                    'algorithm':
+                        ScalewayDSDigestType[record["digest"]["type"]].value,
+                    'public_key': record["digest"]["digest"],
+                }
+            else:
+                value = {
+                    'key_tag': record["key_id"],
+                    'algorithm':
+                        ScalewayDSAlgorithm[record["algorithm"]].value,
+                    'digest_type':
+                        ScalewayDSDigestType[record["digest"]["type"]].value,
+                    'digest': record["digest"]["digest"],
+                }
+            values.append(value)
+        # The TTL is hardcoded and is not returned by the API
+        return {'type': _type, 'values': values, 'ttl': '3600'}
+
     def _data_for_LOC(self, _type, records):
         values = []
         for record in records:
@@ -446,6 +518,16 @@ class ScalewayProvider(BaseProvider):
 
         return self._zone_records[zone.name]
 
+    def zone_ds_records(self, zone):
+        if zone.name not in self._zone_ds_records:
+            try:
+                self._zone_ds_records[zone.name] = \
+                    self._client.zone_ds_records(zone.name[:-1])
+            except ScalewayClientNotFound:
+                return []
+
+        return self._zone_ds_records[zone.name]
+
     def populate(self, zone, target=False, lenient=False):
         self.log.debug('populate: name=%s, target=%s, lenient=%s', zone.name,
                        target, lenient)
@@ -457,6 +539,12 @@ class ScalewayProvider(BaseProvider):
                 continue
             values[record['name']][record['type']].append(record)
 
+        for record_ds in self.zone_ds_records(zone):
+            _type = 'DS'
+            if _type not in self.SUPPORTS:
+                continue
+            values[""][_type].append(record_ds)
+
         before = len(zone.records)
         for name, types in values.items():
             for _type, records in types.items():
@@ -465,7 +553,8 @@ class ScalewayProvider(BaseProvider):
                                     source=self, lenient=lenient)
                 zone.add_record(record, lenient=lenient)
 
-        exists = zone.name in self._zone_records
+        exists = zone.name in self._zone_records \
+            or zone.name in self._zone_ds_records
         self.log.info('populate:   found %s records, exists=%s',
                       len(zone.records) - before, exists)
         return exists
@@ -543,6 +632,37 @@ class ScalewayProvider(BaseProvider):
                          record.values]
         return self._params_for_multiple(record)
 
+    def _params_for_DS(self, record):
+        datas = []
+
+        # Scaleway does not support the use of more than one DS key
+        if len(record.values) > 1:
+            raise ScalewayProviderException('Only one DS record is supported')
+
+        for v in record.values:
+            if self.OLD_DS_FIELDS:
+                data = {
+                    'key_id': v.flags,
+                    'algorithm': ScalewayDSAlgorithm(v.protocol).name,
+                    'digest': {
+                        'type': ScalewayDSDigestType(v.algorithm).name,
+                        'digest': v.public_key
+                    }
+                }
+            else:
+                data = {
+                    'key_id': v.key_tag,
+                    'algorithm': ScalewayDSAlgorithm(v.algorithm).name,
+                    'digest': {
+                        'type': ScalewayDSDigestType(v.digest_type).name,
+                        'digest': v.digest
+                    }
+                }
+            datas.append(data)
+        # Scaleway does not support the use of more than one DS key
+        # replace "datas[0]" by "datas" when supported
+        return datas[0]
+
     def _params_for_LOC(self, record):
         record.values = [f'{v.lat_degrees} {v.lat_minutes} '
                          f'{v.lat_seconds:.3f} '
@@ -585,7 +705,7 @@ class ScalewayProvider(BaseProvider):
 
         pools = record.dynamic.pools
         rules = record.dynamic.rules
-        healthcheck = record._octodns.get('healthcheck', {})
+        healthcheck = record.octodns.get('healthcheck', {})
 
         n = 0
         for pool in pools:
@@ -686,6 +806,14 @@ class ScalewayProvider(BaseProvider):
             'changes': updates
         })
 
+    def _apply_disable_dnssec(self, zone):
+        self._client.dnssec_disable(zone)
+
+    def _apply_enable_dnssec(self, zone, update):
+        self._client.dnssec_enable(zone, {
+            'ds_record': update
+        })
+
     def _apply(self, plan):
         desired = plan.desired
         changes = plan.changes
@@ -698,18 +826,44 @@ class ScalewayProvider(BaseProvider):
         creates = []
         updates = []
         deletes = []
+        udpate_dnssec = None
+        disable_dnssec = False
+
         for change in changes:
             class_name = change.__class__.__name__.lower()
-            if class_name == 'create':
-                creates.append(self._params_create(change))
-            elif class_name == 'update':
-                updates.append(self._params_update(change))
+            # Handle DNSSEC record
+            if change.data["record_type"].lower() == "ds":
+                if class_name in ['create', 'update']:
+                    udpate_dnssec = self._params(change.new)
+                # If DNSSEC is already disabled, skip the check to disable it
+                elif not disable_dnssec:
+                    # Disable DNSSEC if we remove the last DS record
+                    found_ds = False
+                    for r in desired.records:
+                        if r.__class__.__name__.lower() == "ds":
+                            found_ds = True
+                            break
+                    # If no DS records are found, disable DNSSEC
+                    if not found_ds:
+                        disable_dnssec = True
             else:
-                updates.append(self._params_delete(change))
+                if class_name == 'create':
+                    creates.append(self._params_create(change))
+                elif class_name == 'update':
+                    updates.append(self._params_update(change))
+                else:
+                    updates.append(self._params_delete(change))
 
         # Apply the update in the right order: deletes, updates and creates
         try:
-            self._apply_updates(zone, deletes + updates + creates)
+            record_to_updates = deletes + updates + creates
+            if record_to_updates:
+                self._apply_updates(zone, record_to_updates)
+            # DNSSEC use a dedicated endpoint
+            if disable_dnssec:
+                self._apply_disable_dnssec(zone)
+            if udpate_dnssec:
+                self._apply_enable_dnssec(zone, udpate_dnssec)
         except ScalewayClientForbidden:
             e = ScalewayClientUnknownDomainName()
             e.__cause__ = None

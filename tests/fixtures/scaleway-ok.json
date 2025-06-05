@@ -214,7 +214,7 @@
             "data": "3-scaleway.com."
           }
         ],
-        "default": ""
+        "default": "1-scaleway.com."
       }
     },
     {
@@ -254,7 +254,7 @@
         ],
         "must_contain": null,
         "url": "HTTPS://scaleway.com:443/check",
-        "user_agent": "scaleway-octodns/0.0.4",
+        "user_agent": "scaleway-octodns/0.1.0",
         "strategy": "all"
       }
     }

@@ -94,6 +94,24 @@ class TestScalewayProvider(TestCase):
             'type': 'ALIAS',
             'value': 'alias.unit.tests.'
         }),
+        ('', {
+            'ttl': 600,
+            'type': 'NS',
+            'value': ['ns0.dom.scw.cloud.', 'ns1.dom.scw.cloud.']
+        }),
+        ('', {
+            'ttl': 3600,
+            'type': 'DS',
+            'value': [
+                {
+                    'key_tag': 15347,
+                    'algorithm': 13,
+                    'digest_type': 2,
+                    'digest': '4E6DA3FC9374700C0A4ECE3C13D34'
+                              '4B2CEC68EC8083E0580D30322B56ED3A2B7'
+                }
+            ]
+        }),
         ('_srv._tcp2', {
             'ttl': 1800,
             'type': 'SRV',
@@ -179,7 +197,8 @@ class TestScalewayProvider(TestCase):
                     {
                         'pool': 'pool-0',
                         'geos': ['EU']
-                    }
+                    },
+                    {'pool': 'pool-0'},
                 ]
             }
         }),
@@ -303,19 +322,23 @@ class TestScalewayProvider(TestCase):
                 mock.get('/domain/v2beta1/dns-zones/'
                          'unit.tests/records?page_size=1000', text=fh.read())
 
+            with open('tests/fixtures/scaleway-domain-ok.json') as fh:
+                mock.get('/domain/v2beta1/domains/'
+                         'unit.tests', text=fh.read())
+
             zone = Zone('unit.tests.', [])
 
             provider.populate(zone)
             self.assertEqual(15, len(zone.records))
             changes = self.expected.changes(zone, provider)
-            self.assertEqual(27, len(changes))
+            self.assertEqual(28, len(changes))
 
         # 2nd populate makes no network calls/all from cache
         again = Zone('unit.tests.', [])
         provider.populate(again)
         self.assertEqual(15, len(again.records))
         changes = self.expected.changes(zone, provider)
-        self.assertEqual(27, len(changes))
+        self.assertEqual(28, len(changes))
 
         # bust the cache
         del provider._zone_records[zone.name]
@@ -324,6 +347,10 @@ class TestScalewayProvider(TestCase):
         with requests_mock() as mock:
             with open('tests/fixtures/scaleway-nok.json') as fh:
                 mock.get(ANY, text=fh.read())
+
+            with open('tests/fixtures/scaleway-domain-ok.json') as fh:
+                mock.get('/domain/v2beta1/domains/'
+                         'unit.tests', text=fh.read())
 
             zone = Zone('unit.tests.', [])
             provider.populate(zone, lenient=True)
@@ -367,6 +394,8 @@ class TestScalewayProvider(TestCase):
 
             mock.get('/domain/v2beta1/dns-zones/unit.not-exists'
                      '/records?page_size=1000', status_code=403)
+            mock.get('/domain/v2beta1/domains/unit.not-exists',
+                     status_code=403)
             mock.patch('/domain/v2beta1/dns-zones/'
                        'unit.not-exists/records', status_code=403,
                        text='{"message": "domain not found"}')
@@ -390,6 +419,13 @@ class TestScalewayProvider(TestCase):
             provider = ScalewayProvider('test', 'token', True)
 
             zone_dynamic = Zone('unit.dynamic.', [])
+            with open('tests/fixtures/scaleway-nok.json') as fh:
+                mock.get('/domain/v2beta1/dns-zones/unit.dynamic'
+                         '/records?page_size=1000', text=fh.read())
+            with open('tests/fixtures/scaleway-domain-ok.json') as fh:
+                mock.get('/domain/v2beta1/domains/unit.dynamic',
+                         text=fh.read())
+
             zone_dynamic.add_record(Record.new(zone_dynamic, 'dynamic', {
                 'ttl': 300,
                 'type': 'A',
@@ -426,7 +462,7 @@ class TestScalewayProvider(TestCase):
                     'rules': [{
                         'pool': 'pool-0',
                         'geos': ['NA-US-KY']
-                    }]
+                    }, {'pool': 'pool-0'}]
                 }
             }), replace=True)
 
@@ -454,10 +490,15 @@ class TestScalewayProvider(TestCase):
                             ],
                         },
                     },
-                    'rules': [{
-                        'pool': 'pool-0',
-                        'geos': ['NA-US']
-                    }]
+                    'rules': [
+                        {
+                            'pool': 'pool-0',
+                            'geos': ['NA-US']
+                        },
+                        {
+                            'pool': 'pool-0'
+                        }
+                    ]
                 }
             }), replace=True)
 
@@ -521,6 +562,7 @@ class TestScalewayProvider(TestCase):
         provider._client._request.assert_has_calls([
             # created some of the record with expected data
             call('GET', '/dns-zones/unit.tests/records?page_size=1000'),
+            call('GET', '/domains/unit.tests'),
             call('PATCH', '/dns-zones/unit.tests/records', data={
                 'return_all_records': False,
                 'disallow_new_zone_creation': True,
@@ -533,6 +575,24 @@ class TestScalewayProvider(TestCase):
                                     'ttl': 1800,
                                     'type': 'ALIAS',
                                     'data': 'alias.unit.tests.'
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        'add': {
+                            'records': [
+                                {
+                                    'name': '@',
+                                    'ttl': 600,
+                                    'type': 'NS',
+                                    'data': 'ns0.dom.scw.cloud.'
+                                },
+                                {
+                                    'name': '@',
+                                    'ttl': 600,
+                                    'type': 'NS',
+                                    'data': 'ns1.dom.scw.cloud.'
                                 }
                             ]
                         }
@@ -601,7 +661,8 @@ class TestScalewayProvider(TestCase):
                                                 'countries': [],
                                                 'data': '2.2.2.3'
                                             }
-                                        ]
+                                        ],
+                                        'default': '2.2.2.2'
                                     }
                                 }
                             ]
@@ -643,7 +704,7 @@ class TestScalewayProvider(TestCase):
                                         'ips': ['2.2.2.2', '2.2.2.3'],
                                         'must_contain': None,
                                         'url': 'HTTPS://127.0.0.1:443/check',
-                                        'user_agent': 'scaleway-octodns/0.0.4',
+                                        'user_agent': 'scaleway-octodns/0.1.0',
                                         'strategy': 'all'
                                     }
                                 }
@@ -752,9 +813,20 @@ class TestScalewayProvider(TestCase):
                     }
                 ]
             }),
+            call('POST', '/domains/unit.tests/enable-dnssec', data={
+                'ds_record': {
+                    'key_id': 15347,
+                    'algorithm': 'ecdsap256sha256',
+                    'digest': {
+                        'type': 'sha_256',
+                        'digest': '4E6DA3FC9374700C0A4ECE3C13D344B'
+                                  '2CEC68EC8083E0580D30322B56ED3A2B7'
+                    }
+                }
+            })
         ])
         # expected number of total calls
-        self.assertEqual(2, provider._client._request.call_count)
+        self.assertEqual(4, provider._client._request.call_count)
 
         provider._client._request.reset_mock()
 
@@ -779,6 +851,21 @@ class TestScalewayProvider(TestCase):
                 'type': 'A',
             }
         ])
+
+        provider._client.zone_ds_records = Mock(return_value=[
+            {
+                'key_id': 51604,
+                'algorithm': 'ecdsap256sha256',
+                'digest': {
+                    'type': 'sha_384',
+                    'digest': 'f0dff3c18d01fb52d4a80d0d2614fe1c2be12d6e98fa'
+                              '400754ee511d1aca054666bfad9151b0b404efaa96a1'
+                              '0b2abdbc',
+                    'public_key': None
+                }
+            }
+        ])
+
         # Domain exists, we don't care about return
         resp.json.side_effect = ['{}']
 
@@ -788,17 +875,39 @@ class TestScalewayProvider(TestCase):
             'type': 'A',
             'value': '3.2.3.4'
         }))
+        # update DS record
+        wanted.add_record(Record.new(wanted, '', {
+            'ttl': 3600,
+            'type': 'DS',
+            'value': [
+                {
+                    'key_tag': 15347,
+                    'algorithm': 13,
+                    'digest_type': 2,
+                    'digest': '4E6DA3FC9374700C0A4ECE3C13D34'
+                              '4B2CEC68EC8083E0580D30322B56ED3A2B7'
+                }
+            ]
+        }))
 
         plan = provider.plan(wanted)
         self.assertTrue(plan.exists)
-        self.assertEqual(2, len(plan.changes))
-        self.assertEqual(2, provider.apply(plan))
+        self.assertEqual(3, len(plan.changes))
+        self.assertEqual(3, provider.apply(plan))
 
         provider._client._request.assert_has_calls([
             call('PATCH', '/dns-zones/unit.tests/records', data={
                 'return_all_records': False,
                 'disallow_new_zone_creation': True,
                 'changes': [
+                    {
+                        'delete': {
+                            'idFields': {
+                                'type': 'A',
+                                'name': 'www'
+                            }
+                        }
+                    },
                     {
                         'set': {
                             'idFields': {
@@ -814,15 +923,48 @@ class TestScalewayProvider(TestCase):
                                 }
                             ]
                         }
-                    },
-                    {
-                        'delete': {
-                            'idFields': {
-                                'type': 'A',
-                                'name': 'www'
-                            }
-                        }
                     }
                 ]
+            }),
+            call('POST', '/domains/unit.tests/enable-dnssec', data={
+                'ds_record': {
+                    'key_id': 15347,
+                    'algorithm': 'ecdsap256sha256',
+                    'digest': {
+                        'type': 'sha_256',
+                        'digest': '4E6DA3FC9374700C0A4ECE3C'
+                                  '13D344B2CEC68EC8083E0580D30322B56ED3A2B7'
+                    }
+                }
             })
-        ], any_order=True)
+        ])
+
+        # disable dnssec
+        provider._client.zone_records = Mock(return_value=[])
+        provider._client.zone_ds_records = Mock(return_value=[
+            {
+                'key_id': 51604,
+                'algorithm': 'ecdsap256sha256',
+                'digest': {
+                    'type': 'sha_384',
+                    'digest': 'f0dff3c18d01fb52d4a80d0d2614fe1c2be12d6e98fa'
+                              '400754ee511d1aca054666bfad9151b0b404efaa96a1'
+                              '0b2abdbc',
+                    'public_key': None
+                }
+            }
+        ])
+
+        # Domain exists, we don't care about return
+        resp.json.side_effect = ['{}']
+
+        wanted = Zone('unit.tests.', [])
+
+        plan = provider.plan(wanted)
+        self.assertTrue(plan.exists)
+        self.assertEqual(1, len(plan.changes))
+        self.assertEqual(1, provider.apply(plan))
+
+        provider._client._request.assert_has_calls([
+            call('POST', '/domains/unit.tests/disable-dnssec')
+        ])

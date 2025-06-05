@@ -1,0 +1,166 @@
+{
+    "domain": "unit.tests",
+    "organization_id": "",
+    "project_id": "",
+    "auto_renew_status": "enabled",
+    "dnssec": {
+        "status": "disabled",
+        "ds_records": []
+    },
+    "epp_code": [
+        "clientTransferProhibited"
+    ],
+    "expired_at": "2025-07-24T22:16:38Z",
+    "updated_at": "2024-09-04T14:42:50Z",
+    "registrar": "SCALEWAY",
+    "is_external": false,
+    "status": "active",
+    "dns_zones": [
+        {
+            "domain": "unit.tests",
+            "subdomain": "",
+            "ns": [
+                "ns0.dom.scw.cloud.",
+                "ns1.dom.scw.cloud."
+            ],
+            "ns_default": [
+                "ns0.dom.scw.cloud",
+                "ns1.dom.scw.cloud"
+            ],
+            "ns_master": [],
+            "status": "active",
+            "message": null,
+            "updated_at": "2024-04-15T22:13:34Z",
+            "project_id": "",
+            "linked_products": []
+        }
+    ],
+    "owner_contact": {
+        "id": "",
+        "legal_form": "individual",
+        "firstname": "Test",
+        "lastname": "Test",
+        "company_name": "",
+        "email": "localhost@domain",
+        "email_alt": "",
+        "phone_number": "+33.000000000",
+        "fax_number": "",
+        "address_line_1": "",
+        "address_line_2": "",
+        "zip": "",
+        "city": "",
+        "state": "",
+        "country": "",
+        "vat_identification_code": "",
+        "company_identification_code": "",
+        "lang": "",
+        "resale": false,
+        "questions": [],
+        "extension_fr": {
+            "mode": "individual",
+            "individual_info": {
+                "whois_opt_in": false
+            }
+        },
+        "extension_eu": null,
+        "extension_nl": null,
+        "whois_opt_in": false,
+        "email_status": "validated",
+        "status": "status_unknown"
+    },
+    "technical_contact": {
+        "id": "",
+        "legal_form": "legal_form_unknown",
+        "firstname": "",
+        "lastname": "",
+        "company_name": "",
+        "email": "",
+        "email_alt": "",
+        "phone_number": "",
+        "fax_number": "",
+        "address_line_1": "",
+        "address_line_2": "",
+        "zip": "",
+        "city": "",
+        "state": "",
+        "country": "",
+        "vat_identification_code": "",
+        "company_identification_code": "",
+        "lang": "unknown_language_code",
+        "resale": false,
+        "questions": [],
+        "extension_fr": {
+            "mode": "mode_unknown"
+        },
+        "extension_eu": null,
+        "extension_nl": null,
+        "whois_opt_in": false,
+        "email_status": "email_status_unknown",
+        "status": "status_unknown"
+    },
+    "administrative_contact": {
+        "id": "",
+        "legal_form": "legal_form_unknown",
+        "firstname": "",
+        "lastname": "",
+        "company_name": "",
+        "email": "",
+        "email_alt": "",
+        "phone_number": "",
+        "fax_number": "",
+        "address_line_1": "",
+        "address_line_2": "",
+        "zip": "",
+        "city": "",
+        "state": "",
+        "country": "",
+        "vat_identification_code": "",
+        "company_identification_code": "",
+        "lang": "unknown_language_code",
+        "resale": false,
+        "questions": [],
+        "extension_fr": {
+            "mode": "mode_unknown"
+        },
+        "extension_eu": null,
+        "extension_nl": null,
+        "whois_opt_in": false,
+        "email_status": "email_status_unknown",
+        "status": "status_unknown"
+    },
+    "tld": {
+        "name": "tests",
+        "dnssec_support": true,
+        "duration_in_years_min": 1,
+        "duration_in_years_max": 9,
+        "idn_support": false,
+        "offers": {
+            "renew": {
+                "action": "renew",
+                "operation_path": "/network/domain/domains/tests/renew",
+                "price": {
+                    "currency_code": "EUR",
+                    "units": 6,
+                    "nanos": 590000000
+                }
+            },
+            "trade": {
+                "action": "trade",
+                "operation_path": "/network/domain/domains/tests/trade",
+                "price": {
+                    "currency_code": "EUR",
+                    "units": 20,
+                    "nanos": 0
+                }
+            }
+        },
+        "specifications": {
+            "afnic": "1",
+            "grace_period": "1",
+            "owner_infos_fr": "1",
+            "transfer_without_contact": "1"
+        }
+    },
+    "linked_products": [],
+    "pending_trade": false
+}
